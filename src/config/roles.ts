@@ -33,7 +33,7 @@ export const roleAccessConfig: Record<Role, RoleAccessConfig> = {
     areas: ["public", "auth", "agent"],
   },
   customer: {
-    label: "Viewer",
+    label: "Customer",
     areas: ["public", "auth"],
   },
 }

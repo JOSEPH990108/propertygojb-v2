@@ -3,8 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import { adminNavigation, agentNavigation } from "@/config/navigation"
 import { ROUTES } from "@/config/routes"
+import {
+  getInternalNavigation,
+  getInternalWorkspaceLabel,
+  resolveInternalArea,
+} from "@/components/layout/internal-workspace"
 import { cn } from "@/lib/utils"
 
 function isActivePath(pathname: string, href: string) {
@@ -17,9 +21,9 @@ function isActivePath(pathname: string, href: string) {
 
 export function InternalSidebar() {
   const pathname = usePathname()
-  const isAdminRoute = pathname.startsWith("/admin")
-  const navigation = isAdminRoute ? adminNavigation : agentNavigation
-  const workspaceLabel = isAdminRoute ? "Admin Workspace" : "Agent Workspace"
+  const area = resolveInternalArea(pathname)
+  const navigation = getInternalNavigation(area)
+  const workspaceLabel = getInternalWorkspaceLabel(area)
 
   return (
     <aside className="hidden w-72 shrink-0 border-r border-border/70 bg-card/50 md:block">
@@ -47,6 +51,11 @@ export function InternalSidebar() {
               </Link>
             )
           })}
+          {navigation.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-muted-foreground">
+              Navigation will appear for admin or agent routes.
+            </p>
+          ) : null}
         </nav>
       </div>
     </aside>

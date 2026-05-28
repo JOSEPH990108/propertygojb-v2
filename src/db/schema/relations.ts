@@ -1,6 +1,14 @@
 // src\db\schema\relations.ts
 import { relations } from "drizzle-orm";
 import {
+  bookingActivities,
+  bookingParticipants,
+  bookingPayments,
+  bookingStatusHistory,
+  bookingUnits,
+  bookings,
+} from "./bookings";
+import {
   developers,
   projectAmenities,
   projectLayouts,
@@ -19,6 +27,13 @@ import {
   leads,
   leadStatusHistory,
 } from "./crm-leads";
+import {
+  documentAccessLogs,
+  documentRequests,
+  documentSubmissions,
+  documentTypes,
+  documentVerificationLogs,
+} from "./documents";
 import { areas, regions, states } from "./geo";
 import { account, roles, session, user } from "./identity-auth";
 import { pricingSnapshots, units } from "./inventory";
@@ -77,6 +92,20 @@ export const userRelations = relations(user, ({ one, many }) => ({
   queueMemberships: many(whatsappAgentQueueMembers),
   directAssignmentRules: many(whatsappAssignmentRules),
   ownedConversations: many(whatsappConversations),
+  submittedBookings: many(bookings, { relationName: "bookingSubmittedBy" }),
+  assignedBookings: many(bookings, { relationName: "bookingAssignedAgent" }),
+  approvedBookings: many(bookings, { relationName: "bookingApprovedBy" }),
+  rejectedBookings: many(bookings, { relationName: "bookingRejectedBy" }),
+  bookingStatusChanges: many(bookingStatusHistory),
+  verifiedBookingPayments: many(bookingPayments),
+  bookingActivities: many(bookingActivities),
+  requestedDocuments: many(documentRequests, {
+    relationName: "documentRequestedBy",
+  }),
+  waivedDocuments: many(documentRequests, { relationName: "documentWaivedBy" }),
+  uploadedDocumentSubmissions: many(documentSubmissions),
+  verifiedDocumentLogs: many(documentVerificationLogs),
+  documentAccessLogs: many(documentAccessLogs),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -111,6 +140,8 @@ export const projectRelations = relations(projects, ({ one, many }) => ({
   amenities: many(projectAmenities),
   tags: many(projectTags),
   inquiries: many(inquiries),
+  bookings: many(bookings),
+  bookingUnits: many(bookingUnits),
   routingQueues: many(whatsappAgentQueues),
   routingRules: many(whatsappAssignmentRules),
 }));
@@ -195,7 +226,7 @@ export const projectTagsRelations = relations(projectTags, ({ one }) => ({
   tag: one(tags, { fields: [projectTags.tagId], references: [tags.id] }),
 }));
 
-export const unitRelations = relations(units, ({ one }) => ({
+export const unitRelations = relations(units, ({ one, many }) => ({
   project: one(projects, {
     fields: [units.projectId],
     references: [projects.id],
@@ -216,6 +247,7 @@ export const unitRelations = relations(units, ({ one }) => ({
     fields: [units.bookingStatusId],
     references: [bookingStatuses.id],
   }),
+  bookingUnits: many(bookingUnits),
 }));
 
 export const pricingSnapshotsRelations = relations(
@@ -276,10 +308,214 @@ export const leadRelations = relations(leads, ({ one, many }) => ({
   assignments: many(leadAssignments),
   activities: many(leadActivities),
   statusHistory: many(leadStatusHistory),
+  bookings: many(bookings),
   conversations: many(whatsappConversations),
   messages: many(whatsappMessages),
   webhookEvents: many(whatsappWebhookEvents),
 }));
+
+export const bookingRelations = relations(bookings, ({ one, many }) => ({
+  lead: one(leads, { fields: [bookings.leadId], references: [leads.id] }),
+  project: one(projects, {
+    fields: [bookings.projectId],
+    references: [projects.id],
+  }),
+  submittedBy: one(user, {
+    relationName: "bookingSubmittedBy",
+    fields: [bookings.submittedByUserId],
+    references: [user.id],
+  }),
+  assignedAgent: one(user, {
+    relationName: "bookingAssignedAgent",
+    fields: [bookings.assignedAgentUserId],
+    references: [user.id],
+  }),
+  approvedBy: one(user, {
+    relationName: "bookingApprovedBy",
+    fields: [bookings.approvedByUserId],
+    references: [user.id],
+  }),
+  rejectedBy: one(user, {
+    relationName: "bookingRejectedBy",
+    fields: [bookings.rejectedByUserId],
+    references: [user.id],
+  }),
+  units: many(bookingUnits),
+  participants: many(bookingParticipants),
+  statusHistory: many(bookingStatusHistory),
+  payments: many(bookingPayments),
+  activities: many(bookingActivities),
+  documentRequests: many(documentRequests),
+  documentSubmissions: many(documentSubmissions),
+  documentVerificationLogs: many(documentVerificationLogs),
+  documentAccessLogs: many(documentAccessLogs),
+}));
+
+export const bookingUnitRelations = relations(bookingUnits, ({ one }) => ({
+  booking: one(bookings, {
+    fields: [bookingUnits.bookingId],
+    references: [bookings.id],
+  }),
+  project: one(projects, {
+    fields: [bookingUnits.projectId],
+    references: [projects.id],
+  }),
+  unit: one(units, { fields: [bookingUnits.unitId], references: [units.id] }),
+}));
+
+export const bookingParticipantRelations = relations(
+  bookingParticipants,
+  ({ one, many }) => ({
+    booking: one(bookings, {
+      fields: [bookingParticipants.bookingId],
+      references: [bookings.id],
+    }),
+    documentRequests: many(documentRequests),
+    documentSubmissions: many(documentSubmissions),
+  }),
+);
+
+export const bookingStatusHistoryRelations = relations(
+  bookingStatusHistory,
+  ({ one }) => ({
+    booking: one(bookings, {
+      fields: [bookingStatusHistory.bookingId],
+      references: [bookings.id],
+    }),
+    changedBy: one(user, {
+      fields: [bookingStatusHistory.changedByUserId],
+      references: [user.id],
+    }),
+  }),
+);
+
+export const bookingPaymentRelations = relations(bookingPayments, ({ one }) => ({
+  booking: one(bookings, {
+    fields: [bookingPayments.bookingId],
+    references: [bookings.id],
+  }),
+  verifiedBy: one(user, {
+    fields: [bookingPayments.verifiedByUserId],
+    references: [user.id],
+  }),
+}));
+
+export const bookingActivityRelations = relations(bookingActivities, ({ one }) => ({
+  booking: one(bookings, {
+    fields: [bookingActivities.bookingId],
+    references: [bookings.id],
+  }),
+  actor: one(user, {
+    fields: [bookingActivities.actorUserId],
+    references: [user.id],
+  }),
+}));
+
+export const documentTypeRelations = relations(documentTypes, ({ many }) => ({
+  requests: many(documentRequests),
+  submissions: many(documentSubmissions),
+}));
+
+export const documentRequestRelations = relations(
+  documentRequests,
+  ({ one, many }) => ({
+    booking: one(bookings, {
+      fields: [documentRequests.bookingId],
+      references: [bookings.id],
+    }),
+    participant: one(bookingParticipants, {
+      fields: [documentRequests.participantId],
+      references: [bookingParticipants.id],
+    }),
+    documentType: one(documentTypes, {
+      fields: [documentRequests.documentTypeId],
+      references: [documentTypes.id],
+    }),
+    requestedBy: one(user, {
+      relationName: "documentRequestedBy",
+      fields: [documentRequests.requestedByUserId],
+      references: [user.id],
+    }),
+    waivedBy: one(user, {
+      relationName: "documentWaivedBy",
+      fields: [documentRequests.waivedByUserId],
+      references: [user.id],
+    }),
+    submissions: many(documentSubmissions),
+  }),
+);
+
+export const documentSubmissionRelations = relations(
+  documentSubmissions,
+  ({ one, many }) => ({
+    booking: one(bookings, {
+      fields: [documentSubmissions.bookingId],
+      references: [bookings.id],
+    }),
+    request: one(documentRequests, {
+      fields: [documentSubmissions.requestId],
+      references: [documentRequests.id],
+    }),
+    participant: one(bookingParticipants, {
+      fields: [documentSubmissions.participantId],
+      references: [bookingParticipants.id],
+    }),
+    documentType: one(documentTypes, {
+      fields: [documentSubmissions.documentTypeId],
+      references: [documentTypes.id],
+    }),
+    uploadedBy: one(user, {
+      fields: [documentSubmissions.uploadedByUserId],
+      references: [user.id],
+    }),
+    replacedBy: one(documentSubmissions, {
+      relationName: "documentSubmissionReplacement",
+      fields: [documentSubmissions.replacedBySubmissionId],
+      references: [documentSubmissions.id],
+    }),
+    replaces: many(documentSubmissions, {
+      relationName: "documentSubmissionReplacement",
+    }),
+    verificationLogs: many(documentVerificationLogs),
+    accessLogs: many(documentAccessLogs),
+  }),
+);
+
+export const documentVerificationLogRelations = relations(
+  documentVerificationLogs,
+  ({ one }) => ({
+    submission: one(documentSubmissions, {
+      fields: [documentVerificationLogs.submissionId],
+      references: [documentSubmissions.id],
+    }),
+    booking: one(bookings, {
+      fields: [documentVerificationLogs.bookingId],
+      references: [bookings.id],
+    }),
+    verifiedBy: one(user, {
+      fields: [documentVerificationLogs.verifiedByUserId],
+      references: [user.id],
+    }),
+  }),
+);
+
+export const documentAccessLogRelations = relations(
+  documentAccessLogs,
+  ({ one }) => ({
+    submission: one(documentSubmissions, {
+      fields: [documentAccessLogs.submissionId],
+      references: [documentSubmissions.id],
+    }),
+    booking: one(bookings, {
+      fields: [documentAccessLogs.bookingId],
+      references: [bookings.id],
+    }),
+    actor: one(user, {
+      fields: [documentAccessLogs.actorUserId],
+      references: [user.id],
+    }),
+  }),
+);
 
 export const inquiryRelations = relations(inquiries, ({ one, many }) => ({
   lead: one(leads, { fields: [inquiries.leadId], references: [leads.id] }),

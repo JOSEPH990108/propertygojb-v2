@@ -7,6 +7,8 @@ import { seedWhatsAppQueues } from "./11-whatsapp-queues";
 import { seedWhatsAppRoutingRules } from "./12-whatsapp-routing-rules";
 import { seedLeadsInquiriesSample } from "./13-leads-inquiries-sample";
 import { seedWhatsAppSampleEvents } from "./14-whatsapp-sample-events";
+import { seedDocumentTypes } from "./20-document-types";
+import { seedBookingDocumentsSample } from "./21-booking-documents-sample";
 import { seedAdminBootstrapDevOnly } from "./04-admin-bootstrap-dev-only";
 import { seedCatalogMinimum } from "./02-catalog-minimum";
 import { seedCoreLookups } from "./00-core-lookups";
@@ -29,6 +31,9 @@ export async function runAllSeeds(databaseUrl: string) {
     await seedWhatsAppRoutingRules(db);
     await seedLeadsInquiriesSample(db);
     await seedWhatsAppSampleEvents(db);
+
+    await seedDocumentTypes(db);
+    await seedBookingDocumentsSample(db);
   } finally {
     await client.end();
   }

@@ -15,6 +15,13 @@
       "when": 1779989195809,
       "tag": "0001_silly_namora",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779992239832,
+      "tag": "0002_furry_doomsday",
+      "breakpoints": true
     }
   ]
 }

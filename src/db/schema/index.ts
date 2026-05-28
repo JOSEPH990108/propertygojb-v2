@@ -9,4 +9,6 @@ export * from "./catalog";
 export * from "./inventory";
 export * from "./crm-leads";
 export * from "./whatsapp-routing";
+export * from "./bookings";
+export * from "./documents";
 export * from "./relations";

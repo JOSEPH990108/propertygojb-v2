@@ -27,6 +27,50 @@ export const leadStatusEnum = pgEnum("lead_status", [
   "CLOSED",
 ]);
 
+export const bookingStatusEnum = pgEnum("booking_status", [
+  "DRAFT",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "PAYMENT_PENDING",
+  "PAYMENT_VERIFIED",
+  "DOCS_PENDING",
+  "DOCS_VERIFIED",
+  "APPROVED",
+  "REJECTED",
+  "EXPIRED",
+  "CANCELLED",
+]);
+
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "PENDING",
+  "RECEIVED",
+  "VERIFIED",
+  "REJECTED",
+  "REFUNDED",
+]);
+
+export const documentRequestStatusEnum = pgEnum("document_request_status", [
+  "REQUESTED",
+  "SUBMITTED",
+  "VERIFIED",
+  "REJECTED",
+  "WAIVED",
+]);
+
+export const documentSubmissionStatusEnum = pgEnum("document_submission_status", [
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "VERIFIED",
+  "REJECTED",
+  "REPLACED",
+]);
+
+export const documentVerificationStatusEnum = pgEnum("document_verification_status", [
+  "PENDING",
+  "VERIFIED",
+  "REJECTED",
+]);
+
 export const PROJECT_NEARBY_PLACE_CATEGORIES = [
   "SHOPPING",
   "EDUCATION",

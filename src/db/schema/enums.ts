@@ -14,6 +14,19 @@ export const fileVisibilityScopeEnum = pgEnum("file_visibility_scope", [
   "RESTRICTED",
 ]);
 
+export const leadStatusEnum = pgEnum("lead_status", [
+  "NEW",
+  "UNCONTACTED",
+  "ASSIGNED",
+  "CONTACTED",
+  "QUALIFIED",
+  "NURTURING",
+  "APPOINTMENT_SET",
+  "LOST",
+  "SPAM",
+  "CLOSED",
+]);
+
 export const PROJECT_NEARBY_PLACE_CATEGORIES = [
   "SHOPPING",
   "EDUCATION",

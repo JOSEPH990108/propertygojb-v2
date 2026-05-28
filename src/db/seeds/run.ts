@@ -16,7 +16,7 @@ async function main() {
   }
 
   await runAllSeeds(databaseUrl);
-  console.log("Phase 1A seeds completed successfully.");
+  console.log("Database seeds completed successfully.");
 }
 
 main().catch((error: unknown) => {

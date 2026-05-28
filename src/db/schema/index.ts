@@ -7,4 +7,6 @@ export * from "./geo";
 export * from "./files";
 export * from "./catalog";
 export * from "./inventory";
+export * from "./crm-leads";
+export * from "./whatsapp-routing";
 export * from "./relations";

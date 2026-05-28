@@ -2,6 +2,11 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../schema";
+import { seedLeadSources } from "./10-lead-sources";
+import { seedWhatsAppQueues } from "./11-whatsapp-queues";
+import { seedWhatsAppRoutingRules } from "./12-whatsapp-routing-rules";
+import { seedLeadsInquiriesSample } from "./13-leads-inquiries-sample";
+import { seedWhatsAppSampleEvents } from "./14-whatsapp-sample-events";
 import { seedAdminBootstrapDevOnly } from "./04-admin-bootstrap-dev-only";
 import { seedCatalogMinimum } from "./02-catalog-minimum";
 import { seedCoreLookups } from "./00-core-lookups";
@@ -18,6 +23,12 @@ export async function runAllSeeds(databaseUrl: string) {
     await seedCatalogMinimum(db);
     await seedDemoProjectsOptional(db);
     await seedAdminBootstrapDevOnly(db);
+
+    await seedLeadSources(db);
+    await seedWhatsAppQueues(db);
+    await seedWhatsAppRoutingRules(db);
+    await seedLeadsInquiriesSample(db);
+    await seedWhatsAppSampleEvents(db);
   } finally {
     await client.end();
   }

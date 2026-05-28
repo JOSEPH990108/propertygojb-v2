@@ -8,6 +8,13 @@
       "when": 1779980510588,
       "tag": "0000_minor_bromley",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779989195809,
+      "tag": "0001_silly_namora",
+      "breakpoints": true
     }
   ]
 }

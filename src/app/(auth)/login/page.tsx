@@ -1,11 +1,5 @@
-import { PagePlaceholder } from "@/components/layout/page-placeholder"
+import { GoogleAuthCard } from "@/components/auth/google-auth-card"
 
 export default function LoginPage() {
-  return (
-    <PagePlaceholder
-      eyebrow="Auth"
-      title="Login"
-      description="Authentication screen shell ready for Better Auth integration in a future phase."
-    />
-  )
+  return <GoogleAuthCard mode="login" />
 }

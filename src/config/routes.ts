@@ -9,7 +9,10 @@ export const ROUTES = {
   },
   auth: {
     login: "/login",
+    loginOauthError: "/login?error=oauth",
+    loginUnknownRoleError: "/login?error=unknown-role",
     register: "/register",
+    oauthCallback: "/oauth-callback",
     forgotPassword: "/forgot-password",
     verifyOtp: "/verify-otp",
   },

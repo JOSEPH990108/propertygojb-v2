@@ -1,11 +1,5 @@
-import { PagePlaceholder } from "@/components/layout/page-placeholder"
+import { GoogleAuthCard } from "@/components/auth/google-auth-card"
 
 export default function RegisterPage() {
-  return (
-    <PagePlaceholder
-      eyebrow="Auth"
-      title="Register"
-      description="Registration flow placeholder with reusable shell and consistent spacing."
-    />
-  )
+  return <GoogleAuthCard mode="register" />
 }

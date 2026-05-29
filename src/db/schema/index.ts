@@ -11,6 +11,7 @@ export * from "./crm-leads";
 export * from "./whatsapp-routing";
 export * from "./bookings";
 export * from "./documents";
+export * from "./otp";
 export * from "./governance-rbac";
 export * from "./audit";
 export * from "./settings-flags";

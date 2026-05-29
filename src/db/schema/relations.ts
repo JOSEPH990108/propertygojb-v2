@@ -1,6 +1,11 @@
 // src\db\schema\relations.ts
 import { relations } from "drizzle-orm";
 import {
+  adminActionApprovals,
+  auditLogs,
+  authAuditLogs,
+} from "./audit";
+import {
   bookingActivities,
   bookingParticipants,
   bookingPayments,
@@ -35,6 +40,12 @@ import {
   documentVerificationLogs,
 } from "./documents";
 import { areas, regions, states } from "./geo";
+import {
+  permissionGroups,
+  permissions,
+  rolePermissions,
+  userPermissions,
+} from "./governance-rbac";
 import { account, roles, session, user } from "./identity-auth";
 import { pricingSnapshots, units } from "./inventory";
 import {
@@ -44,6 +55,11 @@ import {
   propertyTypes,
   tags,
 } from "./lookups";
+import {
+  featureFlagOverrides,
+  featureFlags,
+  systemSettings,
+} from "./settings-flags";
 import {
   whatsappAgentQueueMembers,
   whatsappAgentQueues,
@@ -77,6 +93,9 @@ export const areaRelations = relations(areas, ({ one, many }) => ({
 
 export const roleRelations = relations(roles, ({ many }) => ({
   users: many(user),
+  rolePermissions: many(rolePermissions),
+  actorAuditLogs: many(auditLogs),
+  featureFlagOverrides: many(featureFlagOverrides),
 }));
 
 export const userRelations = relations(user, ({ one, many }) => ({
@@ -106,6 +125,40 @@ export const userRelations = relations(user, ({ one, many }) => ({
   uploadedDocumentSubmissions: many(documentSubmissions),
   verifiedDocumentLogs: many(documentVerificationLogs),
   documentAccessLogs: many(documentAccessLogs),
+  rolePermissionGrants: many(rolePermissions, {
+    relationName: "rolePermissionGrantedByUser",
+  }),
+  rolePermissionRevocations: many(rolePermissions, {
+    relationName: "rolePermissionRevokedByUser",
+  }),
+  userPermissionSubjects: many(userPermissions, {
+    relationName: "userPermissionUser",
+  }),
+  userPermissionGrants: many(userPermissions, {
+    relationName: "userPermissionGrantedByUser",
+  }),
+  userPermissionRevocations: many(userPermissions, {
+    relationName: "userPermissionRevokedByUser",
+  }),
+  auditLogs: many(auditLogs),
+  authAuditLogs: many(authAuditLogs),
+  updatedSystemSettings: many(systemSettings),
+  updatedFeatureFlags: many(featureFlags),
+  featureFlagUserOverrides: many(featureFlagOverrides, {
+    relationName: "featureFlagOverrideUser",
+  }),
+  updatedFeatureFlagOverrides: many(featureFlagOverrides, {
+    relationName: "featureFlagOverrideUpdatedByUser",
+  }),
+  requestedAdminActionApprovals: many(adminActionApprovals, {
+    relationName: "adminActionApprovalRequestedByUser",
+  }),
+  approvedAdminActionApprovals: many(adminActionApprovals, {
+    relationName: "adminActionApprovalApprovedByUser",
+  }),
+  rejectedAdminActionApprovals: many(adminActionApprovals, {
+    relationName: "adminActionApprovalRejectedByUser",
+  }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -115,6 +168,157 @@ export const sessionRelations = relations(session, ({ one }) => ({
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, { fields: [account.userId], references: [user.id] }),
 }));
+
+export const permissionGroupRelations = relations(
+  permissionGroups,
+  ({ many }) => ({
+    permissions: many(permissions),
+  }),
+);
+
+export const permissionRelations = relations(permissions, ({ one, many }) => ({
+  group: one(permissionGroups, {
+    fields: [permissions.groupId],
+    references: [permissionGroups.id],
+  }),
+  rolePermissions: many(rolePermissions),
+  userPermissions: many(userPermissions),
+}));
+
+export const rolePermissionRelations = relations(
+  rolePermissions,
+  ({ one }) => ({
+    role: one(roles, {
+      fields: [rolePermissions.roleId],
+      references: [roles.id],
+    }),
+    permission: one(permissions, {
+      fields: [rolePermissions.permissionId],
+      references: [permissions.id],
+    }),
+    grantedBy: one(user, {
+      relationName: "rolePermissionGrantedByUser",
+      fields: [rolePermissions.grantedByUserId],
+      references: [user.id],
+    }),
+    revokedBy: one(user, {
+      relationName: "rolePermissionRevokedByUser",
+      fields: [rolePermissions.revokedByUserId],
+      references: [user.id],
+    }),
+  }),
+);
+
+export const userPermissionRelations = relations(
+  userPermissions,
+  ({ one }) => ({
+    user: one(user, {
+      relationName: "userPermissionUser",
+      fields: [userPermissions.userId],
+      references: [user.id],
+    }),
+    permission: one(permissions, {
+      fields: [userPermissions.permissionId],
+      references: [permissions.id],
+    }),
+    grantedBy: one(user, {
+      relationName: "userPermissionGrantedByUser",
+      fields: [userPermissions.grantedByUserId],
+      references: [user.id],
+    }),
+    revokedBy: one(user, {
+      relationName: "userPermissionRevokedByUser",
+      fields: [userPermissions.revokedByUserId],
+      references: [user.id],
+    }),
+  }),
+);
+
+export const auditLogRelations = relations(auditLogs, ({ one }) => ({
+  actorUser: one(user, {
+    fields: [auditLogs.actorUserId],
+    references: [user.id],
+  }),
+  actorRole: one(roles, {
+    fields: [auditLogs.actorRoleId],
+    references: [roles.id],
+  }),
+}));
+
+export const authAuditLogRelations = relations(authAuditLogs, ({ one }) => ({
+  user: one(user, {
+    fields: [authAuditLogs.userId],
+    references: [user.id],
+  }),
+  session: one(session, {
+    fields: [authAuditLogs.sessionId],
+    references: [session.id],
+  }),
+  account: one(account, {
+    fields: [authAuditLogs.accountId],
+    references: [account.id],
+  }),
+}));
+
+export const systemSettingRelations = relations(systemSettings, ({ one }) => ({
+  updatedBy: one(user, {
+    fields: [systemSettings.updatedByUserId],
+    references: [user.id],
+  }),
+}));
+
+export const featureFlagRelations = relations(featureFlags, ({ one, many }) => ({
+  updatedBy: one(user, {
+    fields: [featureFlags.updatedByUserId],
+    references: [user.id],
+  }),
+  overrides: many(featureFlagOverrides),
+}));
+
+export const featureFlagOverrideRelations = relations(
+  featureFlagOverrides,
+  ({ one }) => ({
+    featureFlag: one(featureFlags, {
+      fields: [featureFlagOverrides.featureFlagId],
+      references: [featureFlags.id],
+    }),
+    role: one(roles, {
+      fields: [featureFlagOverrides.roleId],
+      references: [roles.id],
+    }),
+    user: one(user, {
+      relationName: "featureFlagOverrideUser",
+      fields: [featureFlagOverrides.userId],
+      references: [user.id],
+    }),
+    updatedBy: one(user, {
+      relationName: "featureFlagOverrideUpdatedByUser",
+      fields: [featureFlagOverrides.updatedByUserId],
+      references: [user.id],
+    }),
+  }),
+);
+
+export const adminActionApprovalRelations = relations(
+  adminActionApprovals,
+  ({ one }) => ({
+    requestedBy: one(user, {
+      relationName: "adminActionApprovalRequestedByUser",
+      fields: [adminActionApprovals.requestedByUserId],
+      references: [user.id],
+    }),
+    approvedBy: one(user, {
+      relationName: "adminActionApprovalApprovedByUser",
+      fields: [adminActionApprovals.approvedByUserId],
+      references: [user.id],
+    }),
+    rejectedBy: one(user, {
+      relationName: "adminActionApprovalRejectedByUser",
+      fields: [adminActionApprovals.rejectedByUserId],
+      references: [user.id],
+    }),
+  }),
+);
 
 export const developerRelations = relations(developers, ({ many }) => ({
   projects: many(projects),

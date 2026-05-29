@@ -9,6 +9,11 @@ import { seedLeadsInquiriesSample } from "./13-leads-inquiries-sample";
 import { seedWhatsAppSampleEvents } from "./14-whatsapp-sample-events";
 import { seedDocumentTypes } from "./20-document-types";
 import { seedBookingDocumentsSample } from "./21-booking-documents-sample";
+import { seedPermissionGroups } from "./30-permission-groups";
+import { seedPermissions } from "./31-permissions";
+import { seedRolePermissions } from "./32-role-permissions";
+import { seedSettingsAndFlags } from "./33-settings-flags";
+import { seedGovernanceSampleOptional } from "./34-governance-sample-optional";
 import { seedAdminBootstrapDevOnly } from "./04-admin-bootstrap-dev-only";
 import { seedCatalogMinimum } from "./02-catalog-minimum";
 import { seedCoreLookups } from "./00-core-lookups";
@@ -34,6 +39,12 @@ export async function runAllSeeds(databaseUrl: string) {
 
     await seedDocumentTypes(db);
     await seedBookingDocumentsSample(db);
+
+    await seedPermissionGroups(db);
+    await seedPermissions(db);
+    await seedRolePermissions(db);
+    await seedSettingsAndFlags(db);
+    await seedGovernanceSampleOptional(db);
   } finally {
     await client.end();
   }

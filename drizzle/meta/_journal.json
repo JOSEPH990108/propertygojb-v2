@@ -22,6 +22,13 @@
       "when": 1779992239832,
       "tag": "0002_furry_doomsday",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780022952421,
+      "tag": "0003_lyrical_nemesis",
+      "breakpoints": true
     }
   ]
 }

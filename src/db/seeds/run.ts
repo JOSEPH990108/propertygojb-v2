@@ -20,6 +20,6 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error("Phase 1A seeding failed.", error);
+  console.error("Database seeding failed.", error);
   process.exit(1);
 });

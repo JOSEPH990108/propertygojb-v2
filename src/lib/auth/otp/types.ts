@@ -61,7 +61,7 @@ export type OtpRequestPayload = {
 
 export type OtpRequestSuccessResponse = {
   ok: true
-  identifier: string
+  requestId: string
   resendAvailableAt: string
 }
 

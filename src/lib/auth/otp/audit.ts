@@ -49,3 +49,21 @@ export async function writeOtpAuthAuditLog(input: OtpAuditLogInput): Promise<voi
     console.error("OTP auth audit log write failed", error)
   }
 }
+
+export async function writeOtpAuthAuditLogStrict(input: OtpAuditLogInput): Promise<void> {
+  if (!db) {
+    throw new Error("Database client is not available. OTP audit tracking cannot proceed.")
+  }
+
+  await db.insert(schema.authAuditLogs).values({
+    eventType: input.eventType,
+    eventStatus: input.eventStatus,
+    providerId: input.providerId,
+    failureReason: input.failureReason,
+    riskLevel: input.riskLevel ?? (input.eventStatus === "FAILED" ? "MEDIUM" : "LOW"),
+    sourceApp: SOURCE_APP,
+    ipAddress: input.ipAddress ?? null,
+    userAgent: input.userAgent ?? null,
+    metadata: toSafeMetadata(input),
+  })
+}

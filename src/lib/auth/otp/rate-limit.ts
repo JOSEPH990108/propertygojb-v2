@@ -1,7 +1,7 @@
 import "server-only"
 
 import { createHmac } from "crypto"
-import { and, eq, gte, isNotNull, sql } from "drizzle-orm"
+import { and, eq, gte, sql } from "drizzle-orm"
 
 import { db, schema } from "@/db"
 import {
@@ -64,35 +64,39 @@ export async function checkOtpRequestRateLimits(input: {
 
   const now = input.now ?? new Date()
   const windowStart = new Date(now.getTime() - OTP_REQUEST_RATE_LIMIT_WINDOW_SECONDS * 1000)
+  const phoneRateLimitKey = hashRateLimitValue(input.phoneNormalized)
 
   const phoneResult = await db
     .select({
       count: sql<number>`count(*)::int`,
     })
-    .from(schema.otpChallenges)
+    .from(schema.authAuditLogs)
     .where(
       and(
-        eq(schema.otpChallenges.phoneNormalized, input.phoneNormalized),
-        gte(schema.otpChallenges.createdAt, windowStart),
+        eq(schema.authAuditLogs.eventType, "OTP_REQUESTED"),
+        eq(sql<string>`coalesce(${schema.authAuditLogs.metadata}->>'phoneRateLimitKey', '')`, phoneRateLimitKey),
+        gte(schema.authAuditLogs.occurredAt, windowStart),
       ),
     )
 
-  const ipWhere = input.ipAddressHash
-    ? and(
-        eq(schema.otpChallenges.ipAddressHash, input.ipAddressHash),
-        gte(schema.otpChallenges.createdAt, windowStart),
-      )
-    : and(isNotNull(schema.otpChallenges.id), sql`1 = 0`)
-
-  const ipResult = await db
-    .select({
-      count: sql<number>`count(*)::int`,
-    })
-    .from(schema.otpChallenges)
-    .where(ipWhere)
+  const ipCount = input.ipAddressHash
+    ? (
+        await db
+          .select({
+            count: sql<number>`count(*)::int`,
+          })
+          .from(schema.authAuditLogs)
+          .where(
+            and(
+              eq(schema.authAuditLogs.eventType, "OTP_REQUESTED"),
+              eq(sql<string>`coalesce(${schema.authAuditLogs.metadata}->>'ipAddressHash', '')`, input.ipAddressHash),
+              gte(schema.authAuditLogs.occurredAt, windowStart),
+            ),
+          )
+      )[0]?.count ?? 0
+    : 0
 
   const phoneCount = phoneResult[0]?.count ?? 0
-  const ipCount = ipResult[0]?.count ?? 0
 
   if (phoneCount >= OTP_REQUEST_RATE_LIMIT_MAX_PER_PHONE) {
     return {

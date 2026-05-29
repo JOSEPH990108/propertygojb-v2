@@ -1,12 +1,26 @@
 import "server-only"
 
+import { randomUUID } from "crypto"
+
 import { drizzleAdapter } from "@better-auth/drizzle-adapter"
 import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
+import { phoneNumber } from "better-auth/plugins/phone-number"
 
 import { ROUTES } from "@/config/routes"
 import { db, schema } from "@/db"
 import { assertGoogleOAuthEnvConfigured, getAuthRuntimeEnv } from "@/lib/auth/env"
+import { writeOtpAuthAuditLog, writeOtpAuthAuditLogStrict } from "@/lib/auth/otp/audit"
+import { sendOtpViaProvider } from "@/lib/auth/otp/provider"
+import { maskPhone, normalizePhoneToE164 } from "@/lib/auth/otp/phone"
+import { OTP_CODE_LENGTH, OTP_TTL_SECONDS, readOtpRuntimeEnv } from "@/lib/auth/otp/policy"
+import {
+  checkOtpRequestRateLimits,
+  hashIpAddress,
+  hashRateLimitValue,
+  hashUserAgent,
+  resolveRequestIp,
+} from "@/lib/auth/otp/rate-limit"
 
 const env = getAuthRuntimeEnv()
 const googleOAuth = assertGoogleOAuthEnvConfigured()
@@ -140,6 +154,48 @@ function isGoogleOAuthContext(path: string, provider?: string): boolean {
   return path === "/sign-in/social" || path.includes("/callback/google")
 }
 
+function isPhonePluginContext(path: string): boolean {
+  return path === "/phone-number/verify" || path === "/phone-number/send-otp" || path === "/sign-in/phone-number"
+}
+
+function selectPhonePluginChannel(runtimeEnv: string) {
+  return runtimeEnv.toLowerCase() === "development" ? "DEV_CONSOLE" : "SMS"
+}
+
+function createPhoneTempEmail(phoneE164: string): string {
+  const normalized = phoneE164.replace(/[^\d]/g, "")
+  return `phone-${normalized}@phone.local`
+}
+
+function resolveOtpPurposeFromHeaders(headers?: Headers): "LOGIN" | "REGISTER" {
+  const value = headers?.get("x-otp-purpose")?.trim()
+  return value === "REGISTER" ? "REGISTER" : "LOGIN"
+}
+
+function resolveCorrelatedRequestId(headers?: Headers): string {
+  const requestId = headers?.get("x-otp-request-id")?.trim()
+  return requestId ? requestId.slice(0, 120) : randomUUID()
+}
+
+function resolveEndpointHeaders(context?: unknown): Headers | undefined {
+  if (!context || typeof context !== "object") {
+    return undefined
+  }
+
+  const record = context as {
+    headers?: unknown
+    request?: {
+      headers?: Headers
+    }
+  }
+
+  if (record.headers instanceof Headers) {
+    return record.headers
+  }
+
+  return record.request?.headers
+}
+
 const authSchema = {
   user: schema.user,
   session: schema.session,
@@ -183,7 +239,7 @@ export const auth = betterAuth({
           const path = getContextPath(context)
           const provider = getContextProvider(context)
 
-          if (!isGoogleOAuthContext(path, provider)) {
+          if (!isGoogleOAuthContext(path, provider) && !isPhonePluginContext(path)) {
             return
           }
 
@@ -275,5 +331,123 @@ export const auth = betterAuth({
     },
     errorURL: ROUTES.auth.login,
   },
-  plugins: [nextCookies()],
+  plugins: [
+    phoneNumber({
+      otpLength: OTP_CODE_LENGTH,
+      expiresIn: OTP_TTL_SECONDS,
+      allowedAttempts: 5,
+      phoneNumberValidator: async (phoneNumber) => normalizePhoneToE164(phoneNumber).ok,
+      signUpOnVerification: {
+        getTempEmail: createPhoneTempEmail,
+        getTempName: (phoneNumber) => phoneNumber,
+      },
+      sendOTP: async ({ phoneNumber, code }, ctx) => {
+        const normalized = normalizePhoneToE164(phoneNumber)
+        if (!normalized.ok) {
+          throw new Error("Invalid phone number.")
+        }
+
+        const requestHeaders = resolveEndpointHeaders(ctx)
+        const runtimeEnv = readOtpRuntimeEnv()
+        const requestId = resolveCorrelatedRequestId(requestHeaders)
+        const purpose = resolveOtpPurposeFromHeaders(requestHeaders)
+        const ipAddress = requestHeaders ? resolveRequestIp(requestHeaders) : undefined
+        const userAgent = requestHeaders?.get("user-agent") ?? undefined
+        const ipAddressHash = hashIpAddress(ipAddress)
+        const userAgentHash = hashUserAgent(userAgent)
+        const phoneMasked = maskPhone(normalized.data.phoneE164)
+        const channel = selectPhonePluginChannel(runtimeEnv)
+
+        const rateLimitStatus = await checkOtpRequestRateLimits({
+          phoneNormalized: normalized.data.phoneNormalized,
+          ipAddressHash,
+          now: new Date(),
+        })
+
+        if (!rateLimitStatus.allowed) {
+          await writeOtpAuthAuditLog({
+            eventType: "OTP_RESEND_BLOCKED",
+            eventStatus: "FAILED",
+            requestId,
+            providerId: "better-auth-phone-plugin",
+            channel,
+            phoneMasked,
+            ipAddress,
+            userAgent,
+            failureReason: "RATE_LIMIT_BLOCKED",
+            metadata: {
+              blockedReason: rateLimitStatus.blockedReason,
+            },
+          })
+
+          throw new Error("Unable to send code. Please try again later.")
+        }
+
+        await writeOtpAuthAuditLogStrict({
+          eventType: "OTP_REQUESTED",
+          eventStatus: "SUCCESS",
+          requestId,
+          providerId: "better-auth-phone-plugin",
+          channel,
+          phoneMasked,
+          ipAddress,
+          userAgent,
+          metadata: {
+            purpose,
+            phoneRateLimitKey: hashRateLimitValue(normalized.data.phoneNormalized),
+            ipAddressHash,
+            userAgentHash,
+          },
+        })
+
+        const sendResult = await sendOtpViaProvider(
+          {
+            requestId,
+            identifier: requestId,
+            phoneE164: normalized.data.phoneE164,
+            channel,
+            otpCode: code,
+            ttlSeconds: OTP_TTL_SECONDS,
+            purpose,
+            metadata: {
+              source: "BETTER_AUTH_PHONE_PLUGIN",
+            },
+          },
+          runtimeEnv,
+        )
+
+        if (!sendResult.delivered) {
+          await writeOtpAuthAuditLog({
+            eventType: "OTP_DELIVERY_FAILED",
+            eventStatus: "FAILED",
+            requestId,
+            providerId: sendResult.providerName,
+            channel,
+            phoneMasked,
+            ipAddress,
+            userAgent,
+            failureReason: sendResult.failureReason ?? "OTP_PROVIDER_FAILED",
+          })
+
+          throw new Error(sendResult.failureReason ?? "OTP_PROVIDER_FAILED")
+        }
+
+        await writeOtpAuthAuditLog({
+          eventType: "OTP_SENT",
+          eventStatus: "SUCCESS",
+          requestId,
+          providerId: sendResult.providerName,
+          channel,
+          phoneMasked,
+          ipAddress,
+          userAgent,
+          metadata: {
+            providerMessageId: sendResult.providerMessageId,
+            purpose,
+          },
+        })
+      },
+    }),
+    nextCookies(),
+  ],
 })

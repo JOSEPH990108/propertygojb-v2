@@ -72,6 +72,23 @@ export type OtpRequestFailureResponse = {
 
 export type OtpRequestResponse = OtpRequestSuccessResponse | OtpRequestFailureResponse
 
+export type OtpVerifyPayload = {
+  phoneNumber: string
+  code: string
+}
+
+export type OtpVerifySuccessResponse = {
+  ok: true
+  redirectTo: string
+}
+
+export type OtpVerifyFailureResponse = {
+  ok: false
+  message: string
+}
+
+export type OtpVerifyResponse = OtpVerifySuccessResponse | OtpVerifyFailureResponse
+
 export type OtpRequestContext = {
   ipAddress?: string
   userAgent?: string
@@ -91,3 +108,7 @@ export type OtpAuthAuditEventType =
   | "OTP_SENT"
   | "OTP_DELIVERY_FAILED"
   | "OTP_RESEND_BLOCKED"
+  | "OTP_VERIFY_SUCCESS"
+  | "OTP_VERIFY_FAILED"
+  | "OTP_MAX_ATTEMPTS_LOCKED"
+  | "SESSION_CREATED"

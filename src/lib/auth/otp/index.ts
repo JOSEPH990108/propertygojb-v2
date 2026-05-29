@@ -1,0 +1,6 @@
+export * from "@/lib/auth/otp/hash"
+export * from "@/lib/auth/otp/phone"
+export * from "@/lib/auth/otp/policy"
+export * from "@/lib/auth/otp/provider"
+export * from "@/lib/auth/otp/types"
+export * from "@/lib/auth/otp/providers/dev-console"

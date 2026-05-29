@@ -77,8 +77,12 @@ export async function seedGovernanceSampleOptional(db: DB) {
     }
   }
 
+  if (!superAdminRole) {
+    return;
+  }
+
   const requester = await db.query.user.findFirst({
-    where: (table, { eq: equal }) => equal(table.roleId, superAdminRole?.id ?? ""),
+    where: (table, { eq: equal }) => equal(table.roleId, superAdminRole.id),
   });
 
   if (!requester) {

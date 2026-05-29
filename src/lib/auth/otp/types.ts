@@ -50,3 +50,44 @@ export type OtpSafeSuccess<T> = {
 }
 
 export type OtpSafeResult<T> = OtpSafeSuccess<T> | OtpSafeError
+
+export type OtpRequestPurpose = OtpPurpose
+
+export type OtpRequestPayload = {
+  phoneNumber: string
+  purpose: OtpRequestPurpose
+  channelPreference?: OtpChannel
+}
+
+export type OtpRequestSuccessResponse = {
+  ok: true
+  identifier: string
+  resendAvailableAt: string
+}
+
+export type OtpRequestFailureResponse = {
+  ok: false
+  message: string
+}
+
+export type OtpRequestResponse = OtpRequestSuccessResponse | OtpRequestFailureResponse
+
+export type OtpRequestContext = {
+  ipAddress?: string
+  userAgent?: string
+}
+
+export type OtpRateLimitStatus = {
+  allowed: boolean
+  phoneCount: number
+  ipCount: number
+  maxPerPhone: number
+  maxPerIp: number
+  blockedReason?: "PHONE_LIMIT" | "IP_LIMIT"
+}
+
+export type OtpAuthAuditEventType =
+  | "OTP_REQUESTED"
+  | "OTP_SENT"
+  | "OTP_DELIVERY_FAILED"
+  | "OTP_RESEND_BLOCKED"

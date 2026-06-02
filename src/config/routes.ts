@@ -21,6 +21,7 @@ export const ROUTES = {
     users: "/admin/users",
     projects: "/admin/projects",
     properties: "/admin/properties",
+    leads: "/admin/leads",
     agents: "/admin/agents",
     bookings: "/admin/bookings",
     customers: "/admin/customers",

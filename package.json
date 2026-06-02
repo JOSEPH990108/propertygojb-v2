@@ -10,7 +10,8 @@
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
     "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
-    "db:seed": "tsx src/db/seeds/run.ts"
+    "db:seed": "tsx src/db/seeds/run.ts",
+    "db:dev:provision-internal-user": "tsx src/db/scripts/dev-provision-internal-user.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1054.0",

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { ROUTES } from "@/config/routes"
 import { listAdminUsers } from "@/lib/admin/users/actions"
+import { requireRole } from "@/lib/auth/guards"
 
 type UsersPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
@@ -33,6 +34,17 @@ function parsePage(value: string): number {
 }
 
 export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
+  const authContext = await requireRole(["ADMIN", "SUPER_ADMIN"], {
+    nextPath: ROUTES.admin.users,
+  })
+
+  const actorUserId =
+    authContext.user && typeof authContext.user === "object" && typeof (authContext.user as { id?: unknown }).id === "string"
+      ? (authContext.user as { id: string }).id
+      : ""
+
+  const actorRole = authContext.roleCode === "SUPER_ADMIN" ? "SUPER_ADMIN" : "ADMIN"
+
   const params = (await searchParams) ?? {}
   const search = getQueryValue(params.q).trim()
   const roleFilter = getQueryValue(params.role).trim().toUpperCase()
@@ -55,7 +67,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
         <CardHeader>
           <CardTitle>User Management</CardTitle>
           <CardDescription>
-            Read-only internal users list for ADMIN and SUPER_ADMIN. Role mutation is intentionally not enabled in this phase.
+            Internal users list for ADMIN and SUPER_ADMIN with policy-gated role change controls.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -88,7 +100,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
             Showing {result.users.length} of {result.total} users.
           </div>
 
-          <AdminUsersTable users={result.users} />
+          <AdminUsersTable users={result.users} actorRole={actorRole} actorUserId={actorUserId} />
 
           <div className="flex items-center justify-between border-t pt-3 text-sm text-muted-foreground">
             <span>

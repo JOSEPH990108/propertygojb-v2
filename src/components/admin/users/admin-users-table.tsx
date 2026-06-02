@@ -8,9 +8,12 @@ import {
 } from "@/components/ui/table"
 import { UserRoleBadge } from "@/components/admin/users/user-role-badge"
 import type { AdminUserListItem } from "@/lib/admin/users/actions"
+import { RoleChangeDialog } from "@/components/admin/users/role-change-dialog"
 
 type AdminUsersTableProps = {
   users: AdminUserListItem[]
+  actorRole: "ADMIN" | "SUPER_ADMIN"
+  actorUserId: string
 }
 
 function formatDateTime(value: string): string {
@@ -22,7 +25,7 @@ function formatDateTime(value: string): string {
   }).format(date)
 }
 
-export function AdminUsersTable({ users }: AdminUsersTableProps) {
+export function AdminUsersTable({ users, actorRole, actorUserId }: AdminUsersTableProps) {
   if (users.length === 0) {
     return (
       <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
@@ -39,6 +42,7 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
           <TableHead>Email</TableHead>
           <TableHead>Phone</TableHead>
           <TableHead>Role</TableHead>
+          <TableHead>Actions</TableHead>
           <TableHead>Created</TableHead>
           <TableHead>Updated</TableHead>
         </TableRow>
@@ -51,6 +55,15 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
             <TableCell>{userRow.phoneMasked ?? "-"}</TableCell>
             <TableCell>
               <UserRoleBadge roleCode={userRow.roleCode} />
+            </TableCell>
+            <TableCell>
+              <RoleChangeDialog
+                actorRole={actorRole}
+                actorUserId={actorUserId}
+                userId={userRow.id}
+                userName={userRow.name}
+                currentRole={userRow.roleCode}
+              />
             </TableCell>
             <TableCell>{formatDateTime(userRow.createdAt)}</TableCell>
             <TableCell>{formatDateTime(userRow.updatedAt)}</TableCell>

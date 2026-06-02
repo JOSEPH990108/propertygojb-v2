@@ -18,6 +18,7 @@ export const ROUTES = {
   },
   admin: {
     dashboard: "/admin",
+    users: "/admin/users",
     projects: "/admin/projects",
     properties: "/admin/properties",
     agents: "/admin/agents",

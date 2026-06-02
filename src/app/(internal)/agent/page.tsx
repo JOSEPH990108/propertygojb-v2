@@ -1,8 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { SignOutButton } from "@/components/auth/sign-out-button"
 
 export default function AgentDashboardPage() {
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-4 md:grid-cols-3">
+      <div className="flex md:col-span-3 md:justify-end">
+        <SignOutButton />
+      </div>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Agent Dashboard</CardTitle>

@@ -101,29 +101,30 @@ Status values:
 |---|---|---|
 | unauthenticated /admin redirects to /login?next=%2Fadmin | PENDING | |
 | unauthenticated /agent redirects to /login?next=%2Fagent | PENDING | |
-| CUSTOMER cannot access /admin and redirects to / | PENDING | |
-| CUSTOMER cannot access /agent and redirects to / | PENDING | |
+| CUSTOMER cannot access /admin and redirects to / | PASSED | Manually verified with CUSTOMER session. |
+| CUSTOMER cannot access /agent and redirects to / | PASSED | Manually verified with CUSTOMER session. |
 | AGENT can access /agent | PENDING | |
 | AGENT cannot access /admin and redirects to /agent | PENDING | |
 | ADMIN can access /admin | PENDING | |
 | SUPER_ADMIN can access /admin | PENDING | |
 | ADMIN or SUPER_ADMIN cannot access /agent and redirects to /admin | PENDING | |
-| authenticated CUSTOMER visiting /login redirects to / | PENDING | |
-| authenticated CUSTOMER visiting /register redirects to / | PENDING | |
-| authenticated CUSTOMER visiting /verify-otp redirects to / | PENDING | |
+| authenticated CUSTOMER visiting /login redirects to / | PASSED | Manually verified with authenticated CUSTOMER. |
+| authenticated CUSTOMER visiting /register redirects to / | PASSED | Manually verified with authenticated CUSTOMER. |
+| authenticated CUSTOMER visiting /verify-otp redirects to / | PASSED | Manually verified with authenticated CUSTOMER. |
 | authenticated AGENT visiting /login redirects to /agent | PENDING | |
 | authenticated ADMIN visiting /login redirects to /admin | PENDING | |
 | unknown or missing role redirects to /login?error=unknown-role | PENDING | |
 | Google session works with guards | PENDING | |
-| OTP session works with guards | PENDING | |
+| OTP session works with guards | PASSED | Verified during CUSTOMER OTP session guard testing. |
 
 Manual test status summary:
-- PASSED: 0
+- PASSED: 6
 - FAILED: 0
-- PENDING: 17
+- PENDING: 11
 
 ## 9) Known limitations / follow-ups
-- AGENT and ADMIN manual browser tests require suitable seeded or manually-created internal users.
+- AGENT, ADMIN, and SUPER_ADMIN route tests remain pending until internal user provisioning UI or dev test users exist.
+- Sign out UI is not implemented yet, so unauthenticated retesting is less convenient until sign out support is added.
 - Permission-level RBAC remains a future phase.
 - Middleware remains intentionally deferred.
 - Guard checks are layout and page level only.

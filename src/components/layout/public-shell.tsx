@@ -1,5 +1,6 @@
 import Link from "next/link"
 
+import { AuthSessionAction } from "@/components/auth/auth-session-action"
 import { publicNavigation } from "@/config/navigation"
 import { ROUTES } from "@/config/routes"
 import { cn } from "@/lib/utils"
@@ -27,12 +28,7 @@ export function PublicShell({ children, className }: PublicShellProps) {
                 {item.title}
               </Link>
             ))}
-            <Link
-              href={ROUTES.auth.login}
-              className="rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
-            >
-              Login
-            </Link>
+            <AuthSessionAction />
           </nav>
         </div>
       </header>

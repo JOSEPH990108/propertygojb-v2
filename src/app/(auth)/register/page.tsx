@@ -1,7 +1,10 @@
 import { OtpRequestForm } from "@/components/auth/otp-request-form"
 import { GoogleAuthCard } from "@/components/auth/google-auth-card"
+import { redirectAuthenticatedUserByRole } from "@/lib/auth/guards"
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  await redirectAuthenticatedUserByRole()
+
   return (
     <div className="space-y-5">
       <GoogleAuthCard mode="register" />

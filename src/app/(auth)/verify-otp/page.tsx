@@ -1,5 +1,6 @@
 import { OtpVerifyForm } from "@/components/auth/otp-verify-form"
 import { ROUTES } from "@/config/routes"
+import { redirectAuthenticatedUserByRole } from "@/lib/auth/guards"
 
 type VerifyOtpPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
@@ -18,6 +19,8 @@ function resolveQueryValue(value: string | string[] | undefined): string {
 }
 
 export default async function VerifyOtpPage({ searchParams }: VerifyOtpPageProps) {
+  await redirectAuthenticatedUserByRole()
+
   const resolvedSearchParams = (await searchParams) ?? {}
   const initialPhoneNumber = resolveQueryValue(resolvedSearchParams.phoneNumber)
   const initialRequestId = resolveQueryValue(resolvedSearchParams.requestId)

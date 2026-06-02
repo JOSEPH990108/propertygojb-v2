@@ -6,6 +6,7 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter"
 import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
 import { phoneNumber } from "better-auth/plugins/phone-number"
+import { and, eq, isNull } from "drizzle-orm"
 
 import { ROUTES } from "@/config/routes"
 import { db, schema } from "@/db"
@@ -154,10 +155,6 @@ function isGoogleOAuthContext(path: string, provider?: string): boolean {
   return path === "/sign-in/social" || path.includes("/callback/google")
 }
 
-function isPhonePluginContext(path: string): boolean {
-  return path === "/phone-number/verify" || path === "/phone-number/send-otp" || path === "/sign-in/phone-number"
-}
-
 function selectPhonePluginChannel(runtimeEnv: string) {
   return runtimeEnv.toLowerCase() === "development" ? "DEV_CONSOLE" : "SMS"
 }
@@ -235,11 +232,9 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (userRecord, context) => {
-          const path = getContextPath(context)
-          const provider = getContextProvider(context)
-
-          if (!isGoogleOAuthContext(path, provider) && !isPhonePluginContext(path)) {
+        before: async (userRecord) => {
+          // Registration should default to CUSTOMER when role is not explicitly provided.
+          if (typeof userRecord.roleId === "string" && userRecord.roleId.trim()) {
             return
           }
 
@@ -251,6 +246,23 @@ export const auth = betterAuth({
               roleId: customerRoleId,
             },
           }
+        },
+        after: async (createdUser) => {
+          const createdUserId = typeof createdUser.id === "string" ? createdUser.id : undefined
+          const hasRole = typeof createdUser.roleId === "string" && createdUser.roleId.trim().length > 0
+
+          if (!createdUserId || hasRole) {
+            return
+          }
+
+          const customerRoleId = await resolveCustomerRoleId()
+
+          // Fallback guard: if upstream creation flow skipped roleId in payload,
+          // ensure registration still persists CUSTOMER as default role.
+          await authDb
+            .update(schema.user)
+            .set({ roleId: customerRoleId })
+            .where(and(eq(schema.user.id, createdUserId), isNull(schema.user.roleId)))
         },
       },
     },

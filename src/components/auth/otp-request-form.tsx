@@ -4,8 +4,8 @@ import { LoaderCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
+import { PhoneNumberInput } from "@/components/auth/phone-number-input"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { ROUTES } from "@/config/routes"
 import { requestOtpCodeClient } from "@/lib/auth/otp/client"
 import { normalizePhoneToE164 } from "@/lib/auth/otp/phone"
@@ -42,7 +42,7 @@ export function OtpRequestForm({ purpose }: OtpRequestFormProps) {
     setIsLoading(true)
 
     const response = await requestOtpCodeClient({
-      phoneNumber: normalizedInput,
+      phoneNumber: normalizedPhone.data.phoneE164,
       purpose,
     })
 
@@ -67,16 +67,12 @@ export function OtpRequestForm({ purpose }: OtpRequestFormProps) {
         <label className="text-sm font-medium" htmlFor={`phone-${purpose.toLowerCase()}`}>
           Mobile number
         </label>
-        <Input
+        <PhoneNumberInput
           id={`phone-${purpose.toLowerCase()}`}
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
           value={phoneNumber}
-          onChange={(event) => setPhoneNumber(event.target.value)}
-          placeholder="e.g. +60123456789"
+          onValueChange={setPhoneNumber}
           disabled={isLoading}
-          aria-invalid={errorMessage ? true : undefined}
+          ariaInvalid={errorMessage ? true : undefined}
         />
       </div>
 

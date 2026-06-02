@@ -131,16 +131,10 @@ function mergeCookieHeader(existingCookieHeader: string | null, setCookieHeaders
     .join("; ")
 }
 
-async function resolveRoleCode(input: { role?: unknown; roleId?: unknown }): Promise<string | undefined> {
-  if (typeof input.role === "string" && input.role.trim()) {
-    return input.role.trim().toUpperCase()
-  }
-
-  if (typeof input.roleId !== "string" || !input.roleId || !db) {
+async function resolveRoleCodeFromRoleId(roleId: string): Promise<string | undefined> {
+  if (!db) {
     return undefined
   }
-
-  const roleId = input.roleId
 
   const role = await db.query.roles.findFirst({
     where: (table, { eq }) => eq(table.id, roleId),
@@ -150,6 +144,41 @@ async function resolveRoleCode(input: { role?: unknown; roleId?: unknown }): Pro
   })
 
   return role?.code?.toUpperCase()
+}
+
+async function resolveRoleCodeFromDatabaseUserId(userId: unknown): Promise<string | undefined> {
+  if (typeof userId !== "string" || !userId || !db) {
+    return undefined
+  }
+
+  // Use canonical user id from confirmed Better Auth session, then resolve role via DB state.
+  const userRecord = await db.query.user.findFirst({
+    where: (table, { eq }) => eq(table.id, userId),
+    columns: {
+      roleId: true,
+    },
+  })
+
+  if (!userRecord?.roleId) {
+    return undefined
+  }
+
+  return resolveRoleCodeFromRoleId(userRecord.roleId)
+}
+
+async function resolveRoleCodeFromSessionFallback(input: {
+  role?: unknown
+  roleId?: unknown
+}): Promise<string | undefined> {
+  if (typeof input.role === "string" && input.role.trim()) {
+    return input.role.trim().toUpperCase()
+  }
+
+  if (typeof input.roleId !== "string" || !input.roleId) {
+    return undefined
+  }
+
+  return resolveRoleCodeFromRoleId(input.roleId)
 }
 
 function mapRoleToRedirect(roleCode?: string): string {
@@ -250,10 +279,19 @@ export async function verifyOtpCode(payload: OtpVerifyPayload, requestHeaders?: 
       }
     }
 
-    const roleCode = await resolveRoleCode({
-      role: (sessionResult.user as { role?: unknown }).role,
-      roleId: (sessionResult.user as { roleId?: unknown }).roleId,
-    })
+    const sessionUser = sessionResult.user as {
+      id?: unknown
+      role?: unknown
+      roleId?: unknown
+    }
+
+    const roleCodeFromDatabase = await resolveRoleCodeFromDatabaseUserId(sessionUser.id)
+    const roleCode =
+      roleCodeFromDatabase ??
+      (await resolveRoleCodeFromSessionFallback({
+        role: sessionUser.role,
+        roleId: sessionUser.roleId,
+      }))
 
     const redirectTo = mapRoleToRedirect(roleCode)
 

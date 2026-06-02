@@ -4,6 +4,7 @@ import { LoaderCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
+import { PhoneNumberInput } from "@/components/auth/phone-number-input"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { verifyOtpCodeClient } from "@/lib/auth/otp/client"
@@ -69,15 +70,12 @@ export function OtpVerifyForm({ initialPhoneNumber, initialRequestId }: OtpVerif
         <label className="text-sm font-medium" htmlFor="verify-phone-number">
           Mobile number
         </label>
-        <Input
+        <PhoneNumberInput
           id="verify-phone-number"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
           value={phoneNumber}
-          onChange={(event) => setPhoneNumber(event.target.value)}
-          placeholder="e.g. +60123456789"
+          onValueChange={setPhoneNumber}
           disabled={isLoading}
+          ariaInvalid={errorMessage ? true : undefined}
         />
       </div>
 

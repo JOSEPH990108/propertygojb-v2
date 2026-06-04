@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/auth/guards"
+import { InternalShell } from "@/components/internal/shell"
 
 type AdminLayoutProps = {
   children: React.ReactNode
@@ -9,5 +10,5 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     nextPath: "/admin",
   })
 
-  return <>{children}</>
+  return <InternalShell portal="admin">{children}</InternalShell>
 }

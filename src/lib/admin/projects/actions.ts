@@ -19,6 +19,10 @@ import {
   type ProjectMutationInput,
   validateProjectMutationInput,
 } from "@/lib/admin/projects/validation"
+import {
+  buildSafeProjectAuditSnapshot,
+  writeProjectAudit,
+} from "@/lib/admin/projects/audit"
 import { requireRole } from "@/lib/auth/guards"
 
 export type AdminProjectListItem = {
@@ -221,8 +225,28 @@ function normalizeProjectId(value: unknown): string | null {
   return normalized ? normalized : null
 }
 
-async function slugExists(slug: string, excludeProjectId?: string): Promise<boolean> {
-  if (!db) {
+function resolveActorUserId(value: unknown): string | null {
+  if (!value || typeof value !== "object") {
+    return null
+  }
+
+  const candidate = (value as { id?: unknown }).id
+  return typeof candidate === "string" && candidate ? candidate : null
+}
+
+class AuditWriteFailedError extends Error {
+  constructor() {
+    super("AUDIT_WRITE_FAILED")
+    this.name = "AuditWriteFailedError"
+  }
+}
+
+type SelectClient = {
+  select: NonNullable<typeof db>["select"]
+}
+
+async function slugExists(client: SelectClient, slug: string, excludeProjectId?: string): Promise<boolean> {
+  if (!client) {
     return false
   }
 
@@ -230,7 +254,7 @@ async function slugExists(slug: string, excludeProjectId?: string): Promise<bool
     ? and(eq(projects.slug, slug), ne(projects.id, excludeProjectId))
     : eq(projects.slug, slug)
 
-  const rows = await db
+  const rows = await client
     .select({
       id: projects.id,
     })
@@ -242,6 +266,7 @@ async function slugExists(slug: string, excludeProjectId?: string): Promise<bool
 }
 
 async function lookupExists(
+  client: SelectClient,
   table:
     | typeof developers
     | typeof projectStatuses
@@ -254,11 +279,11 @@ async function lookupExists(
     | typeof files,
   id: string,
 ): Promise<boolean> {
-  if (!db) {
+  if (!client) {
     return false
   }
 
-  const rows = await db
+  const rows = await client
     .select({
       id: table.id,
     })
@@ -668,9 +693,14 @@ export async function getAdminProjectById(projectId: string): Promise<GetAdminPr
 }
 
 export async function createAdminProject(input: ProjectMutationInput): Promise<AdminProjectMutationResult> {
-  await requireRole(["ADMIN", "SUPER_ADMIN"], {
+  const authContext = await requireRole(["ADMIN", "SUPER_ADMIN"], {
     nextPath: ROUTES.admin.projects,
   })
+
+  const actorUserId = resolveActorUserId(authContext.user)
+  if (!actorUserId) {
+    return buildFailure("UNAUTHENTICATED", "Authentication is required.")
+  }
 
   if (!db) {
     return buildFailure("CREATE_FAILED", "Project create service is unavailable.")
@@ -687,117 +717,141 @@ export async function createAdminProject(input: ProjectMutationInput): Promise<A
 
   const payload = validation.payload
 
-  if (await slugExists(payload.slug!)) {
-    return buildFailure("SLUG_ALREADY_EXISTS", "Slug is already in use.", {
-      slug: "Slug is already in use.",
-    })
-  }
-
-  if (!(await lookupExists(developers, payload.developerId!))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Developer was not found.", {
-      developerId: "Developer was not found.",
-    })
-  }
-
-  if (!(await lookupExists(tenureTypes, payload.tenureTypeId!))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Tenure type was not found.", {
-      tenureTypeId: "Tenure type was not found.",
-    })
-  }
-
-  if (!(await lookupExists(projectStatuses, payload.projectStatusId!))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Project status was not found.", {
-      projectStatusId: "Project status was not found.",
-    })
-  }
-
-  if (payload.propertyCategoryId && !(await lookupExists(propertyCategories, payload.propertyCategoryId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Property category was not found.", {
-      propertyCategoryId: "Property category was not found.",
-    })
-  }
-
-  if (payload.propertyTypeId && !(await lookupExists(propertyTypes, payload.propertyTypeId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Property type was not found.", {
-      propertyTypeId: "Property type was not found.",
-    })
-  }
-
-  if (payload.titleTypeId && !(await lookupExists(titleTypes, payload.titleTypeId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Title type was not found.", {
-      titleTypeId: "Title type was not found.",
-    })
-  }
-
-  if (payload.regionId && !(await lookupExists(regions, payload.regionId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Region was not found.", {
-      regionId: "Region was not found.",
-    })
-  }
-
-  if (payload.areaId && !(await lookupExists(areas, payload.areaId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Area was not found.", {
-      areaId: "Area was not found.",
-    })
-  }
-
-  if (payload.featuredFileId && !(await lookupExists(files, payload.featuredFileId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Featured file was not found.", {
-      featuredFileId: "Featured file was not found.",
-    })
-  }
-
   try {
-    const rows = await db
-      .insert(projects)
-      .values({
-        name: payload.name!,
-        slug: payload.slug!,
-        displayName: payload.displayName ?? null,
-        legalName: payload.legalName ?? null,
-        description: payload.description ?? null,
-        developerId: payload.developerId!,
-        propertyCategoryId: payload.propertyCategoryId ?? null,
-        propertyTypeId: payload.propertyTypeId ?? null,
-        projectStatusId: payload.projectStatusId!,
-        tenureTypeId: payload.tenureTypeId!,
-        titleTypeId: payload.titleTypeId ?? null,
-        regionId: payload.regionId ?? null,
-        areaId: payload.areaId ?? null,
-        address: payload.address ?? null,
-        latitude: payload.latitude ?? null,
-        longitude: payload.longitude ?? null,
-        landAreaAcres: payload.landAreaAcres ?? null,
-        totalUnits: payload.totalUnits ?? 0,
-        launchYear: payload.launchYear ?? null,
-        isPublished: payload.isPublished ?? false,
-        featuredFileId: payload.featuredFileId ?? null,
-      })
-      .returning({
-        id: projects.id,
-        slug: projects.slug,
-      })
+    return await db.transaction(async (tx) => {
+      if (await slugExists(tx, payload.slug!)) {
+        return buildFailure("SLUG_ALREADY_EXISTS", "Slug is already in use.", {
+          slug: "Slug is already in use.",
+        })
+      }
 
-    const created = rows[0]
-    if (!created) {
-      return buildFailure("CREATE_FAILED", "Project could not be created.")
-    }
+      if (!(await lookupExists(tx, developers, payload.developerId!))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Developer was not found.", {
+          developerId: "Developer was not found.",
+        })
+      }
 
-    // Audit logging is intentionally deferred to Phase 2D.6.
-    return {
-      ok: true,
-      projectId: created.id,
-      slug: created.slug,
-    }
+      if (!(await lookupExists(tx, tenureTypes, payload.tenureTypeId!))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Tenure type was not found.", {
+          tenureTypeId: "Tenure type was not found.",
+        })
+      }
+
+      if (!(await lookupExists(tx, projectStatuses, payload.projectStatusId!))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Project status was not found.", {
+          projectStatusId: "Project status was not found.",
+        })
+      }
+
+      if (payload.propertyCategoryId && !(await lookupExists(tx, propertyCategories, payload.propertyCategoryId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Property category was not found.", {
+          propertyCategoryId: "Property category was not found.",
+        })
+      }
+
+      if (payload.propertyTypeId && !(await lookupExists(tx, propertyTypes, payload.propertyTypeId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Property type was not found.", {
+          propertyTypeId: "Property type was not found.",
+        })
+      }
+
+      if (payload.titleTypeId && !(await lookupExists(tx, titleTypes, payload.titleTypeId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Title type was not found.", {
+          titleTypeId: "Title type was not found.",
+        })
+      }
+
+      if (payload.regionId && !(await lookupExists(tx, regions, payload.regionId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Region was not found.", {
+          regionId: "Region was not found.",
+        })
+      }
+
+      if (payload.areaId && !(await lookupExists(tx, areas, payload.areaId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Area was not found.", {
+          areaId: "Area was not found.",
+        })
+      }
+
+      if (payload.featuredFileId && !(await lookupExists(tx, files, payload.featuredFileId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Featured file was not found.", {
+          featuredFileId: "Featured file was not found.",
+        })
+      }
+
+      const rows = await tx
+        .insert(projects)
+        .values({
+          name: payload.name!,
+          slug: payload.slug!,
+          displayName: payload.displayName ?? null,
+          legalName: payload.legalName ?? null,
+          description: payload.description ?? null,
+          developerId: payload.developerId!,
+          propertyCategoryId: payload.propertyCategoryId ?? null,
+          propertyTypeId: payload.propertyTypeId ?? null,
+          projectStatusId: payload.projectStatusId!,
+          tenureTypeId: payload.tenureTypeId!,
+          titleTypeId: payload.titleTypeId ?? null,
+          regionId: payload.regionId ?? null,
+          areaId: payload.areaId ?? null,
+          address: payload.address ?? null,
+          latitude: payload.latitude ?? null,
+          longitude: payload.longitude ?? null,
+          landAreaAcres: payload.landAreaAcres ?? null,
+          totalUnits: payload.totalUnits ?? 0,
+          launchYear: payload.launchYear ?? null,
+          isPublished: payload.isPublished ?? false,
+          featuredFileId: payload.featuredFileId ?? null,
+        })
+        .returning({
+          id: projects.id,
+          slug: projects.slug,
+          name: projects.name,
+          isPublished: projects.isPublished,
+        })
+
+      const created = rows[0]
+      if (!created) {
+        return buildFailure("CREATE_FAILED", "Project could not be created.")
+      }
+
+      try {
+        await writeProjectAudit(tx, {
+          mode: "create",
+          actorUserId,
+          actorRoleId: authContext.roleId,
+          next: buildSafeProjectAuditSnapshot({
+            projectId: created.id,
+            name: created.name,
+            slug: created.slug,
+            isPublished: created.isPublished,
+          }),
+        })
+      } catch {
+        throw new AuditWriteFailedError()
+      }
+
+      return {
+        ok: true,
+        projectId: created.id,
+        slug: created.slug,
+      }
+    })
   } catch {
     return buildFailure("CREATE_FAILED", "Project could not be created.")
   }
 }
 
 export async function updateAdminProject(input: ProjectMutationInput): Promise<AdminProjectMutationResult> {
-  await requireRole(["ADMIN", "SUPER_ADMIN"], {
+  const authContext = await requireRole(["ADMIN", "SUPER_ADMIN"], {
     nextPath: ROUTES.admin.projects,
   })
+
+  const actorUserId = resolveActorUserId(authContext.user)
+  if (!actorUserId) {
+    return buildFailure("UNAUTHENTICATED", "Authentication is required.")
+  }
 
   if (!db) {
     return buildFailure("UPDATE_FAILED", "Project update service is unavailable.")
@@ -810,133 +864,216 @@ export async function updateAdminProject(input: ProjectMutationInput): Promise<A
     })
   }
 
-  const existingResult = await getAdminProjectById(projectId)
-  if (!existingResult.ok) {
-    return buildFailure("PROJECT_NOT_FOUND", "Project was not found.")
-  }
-
-  const completeInput = toEditableProjectInput(existingResult.project, input)
-  const validation = validateProjectMutationInput(completeInput, "update")
-  if (!validation.ok) {
-    return buildFailure(
-      "VALIDATION_FAILED",
-      "Project input is invalid.",
-      validation.fieldErrors,
-    )
-  }
-
-  const payload = validation.payload
-
-  if (!payload.slug) {
-    return buildFailure("VALIDATION_FAILED", "Slug is required.", {
-      slug: "Slug is required.",
-    })
-  }
-
-  if (await slugExists(payload.slug, projectId)) {
-    return buildFailure("SLUG_ALREADY_EXISTS", "Slug is already in use.", {
-      slug: "Slug is already in use.",
-    })
-  }
-
-  if (payload.developerId && !(await lookupExists(developers, payload.developerId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Developer was not found.", {
-      developerId: "Developer was not found.",
-    })
-  }
-
-  if (payload.tenureTypeId && !(await lookupExists(tenureTypes, payload.tenureTypeId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Tenure type was not found.", {
-      tenureTypeId: "Tenure type was not found.",
-    })
-  }
-
-  if (payload.projectStatusId && !(await lookupExists(projectStatuses, payload.projectStatusId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Project status was not found.", {
-      projectStatusId: "Project status was not found.",
-    })
-  }
-
-  if (payload.propertyCategoryId && !(await lookupExists(propertyCategories, payload.propertyCategoryId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Property category was not found.", {
-      propertyCategoryId: "Property category was not found.",
-    })
-  }
-
-  if (payload.propertyTypeId && !(await lookupExists(propertyTypes, payload.propertyTypeId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Property type was not found.", {
-      propertyTypeId: "Property type was not found.",
-    })
-  }
-
-  if (payload.titleTypeId && !(await lookupExists(titleTypes, payload.titleTypeId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Title type was not found.", {
-      titleTypeId: "Title type was not found.",
-    })
-  }
-
-  if (payload.regionId && !(await lookupExists(regions, payload.regionId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Region was not found.", {
-      regionId: "Region was not found.",
-    })
-  }
-
-  if (payload.areaId && !(await lookupExists(areas, payload.areaId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Area was not found.", {
-      areaId: "Area was not found.",
-    })
-  }
-
-  if (payload.featuredFileId && !(await lookupExists(files, payload.featuredFileId))) {
-    return buildFailure("LOOKUP_NOT_FOUND", "Featured file was not found.", {
-      featuredFileId: "Featured file was not found.",
-    })
-  }
-
   try {
-    const rows = await db
-      .update(projects)
-      .set({
-        name: payload.name,
-        slug: payload.slug,
-        displayName: payload.displayName,
-        legalName: payload.legalName,
-        description: payload.description,
-        developerId: payload.developerId,
-        propertyCategoryId: payload.propertyCategoryId,
-        propertyTypeId: payload.propertyTypeId,
-        projectStatusId: payload.projectStatusId,
-        tenureTypeId: payload.tenureTypeId,
-        titleTypeId: payload.titleTypeId,
-        regionId: payload.regionId,
-        areaId: payload.areaId,
-        address: payload.address,
-        latitude: payload.latitude,
-        longitude: payload.longitude,
-        landAreaAcres: payload.landAreaAcres,
-        totalUnits: payload.totalUnits,
-        launchYear: payload.launchYear,
-        isPublished: payload.isPublished,
-        featuredFileId: payload.featuredFileId,
-        updatedAt: new Date(),
-      })
-      .where(eq(projects.id, projectId))
-      .returning({
-        id: projects.id,
-        slug: projects.slug,
-      })
+    return await db.transaction(async (tx) => {
+      const existingRows = await tx
+        .select({
+          id: projects.id,
+          name: projects.name,
+          slug: projects.slug,
+          displayName: projects.displayName,
+          legalName: projects.legalName,
+          description: projects.description,
+          developerId: projects.developerId,
+          propertyCategoryId: projects.propertyCategoryId,
+          propertyTypeId: projects.propertyTypeId,
+          projectStatusId: projects.projectStatusId,
+          tenureTypeId: projects.tenureTypeId,
+          titleTypeId: projects.titleTypeId,
+          regionId: projects.regionId,
+          areaId: projects.areaId,
+          address: projects.address,
+          latitude: projects.latitude,
+          longitude: projects.longitude,
+          landAreaAcres: projects.landAreaAcres,
+          totalUnits: projects.totalUnits,
+          launchYear: projects.launchYear,
+          isPublished: projects.isPublished,
+          featuredFileId: projects.featuredFileId,
+          createdAt: projects.createdAt,
+          updatedAt: projects.updatedAt,
+        })
+        .from(projects)
+        .where(eq(projects.id, projectId))
+        .limit(1)
 
-    const updated = rows[0]
-    if (!updated) {
-      return buildFailure("UPDATE_FAILED", "Project could not be updated.")
-    }
+      const existing = existingRows[0]
+      if (!existing) {
+        return buildFailure("PROJECT_NOT_FOUND", "Project was not found.")
+      }
 
-    // Audit logging is intentionally deferred to Phase 2D.6.
-    return {
-      ok: true,
-      projectId: updated.id,
-      slug: updated.slug,
-    }
+      const existingProject: AdminProjectEditable = {
+        id: existing.id,
+        name: existing.name,
+        slug: existing.slug,
+        displayName: existing.displayName,
+        legalName: existing.legalName,
+        description: existing.description,
+        developerId: existing.developerId,
+        propertyCategoryId: existing.propertyCategoryId,
+        propertyTypeId: existing.propertyTypeId,
+        projectStatusId: existing.projectStatusId,
+        tenureTypeId: existing.tenureTypeId,
+        titleTypeId: existing.titleTypeId,
+        regionId: existing.regionId,
+        areaId: existing.areaId,
+        address: existing.address,
+        latitude: existing.latitude,
+        longitude: existing.longitude,
+        landAreaAcres: existing.landAreaAcres,
+        totalUnits: existing.totalUnits,
+        launchYear: existing.launchYear,
+        isPublished: existing.isPublished,
+        featuredFileId: existing.featuredFileId,
+        createdAt: existing.createdAt.toISOString(),
+        updatedAt: existing.updatedAt.toISOString(),
+      }
+
+      const completeInput = toEditableProjectInput(existingProject, input)
+      const validation = validateProjectMutationInput(completeInput, "update")
+      if (!validation.ok) {
+        return buildFailure(
+          "VALIDATION_FAILED",
+          "Project input is invalid.",
+          validation.fieldErrors,
+        )
+      }
+
+      const payload = validation.payload
+
+      if (!payload.slug) {
+        return buildFailure("VALIDATION_FAILED", "Slug is required.", {
+          slug: "Slug is required.",
+        })
+      }
+
+      if (await slugExists(tx, payload.slug, projectId)) {
+        return buildFailure("SLUG_ALREADY_EXISTS", "Slug is already in use.", {
+          slug: "Slug is already in use.",
+        })
+      }
+
+      if (payload.developerId && !(await lookupExists(tx, developers, payload.developerId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Developer was not found.", {
+          developerId: "Developer was not found.",
+        })
+      }
+
+      if (payload.tenureTypeId && !(await lookupExists(tx, tenureTypes, payload.tenureTypeId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Tenure type was not found.", {
+          tenureTypeId: "Tenure type was not found.",
+        })
+      }
+
+      if (payload.projectStatusId && !(await lookupExists(tx, projectStatuses, payload.projectStatusId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Project status was not found.", {
+          projectStatusId: "Project status was not found.",
+        })
+      }
+
+      if (payload.propertyCategoryId && !(await lookupExists(tx, propertyCategories, payload.propertyCategoryId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Property category was not found.", {
+          propertyCategoryId: "Property category was not found.",
+        })
+      }
+
+      if (payload.propertyTypeId && !(await lookupExists(tx, propertyTypes, payload.propertyTypeId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Property type was not found.", {
+          propertyTypeId: "Property type was not found.",
+        })
+      }
+
+      if (payload.titleTypeId && !(await lookupExists(tx, titleTypes, payload.titleTypeId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Title type was not found.", {
+          titleTypeId: "Title type was not found.",
+        })
+      }
+
+      if (payload.regionId && !(await lookupExists(tx, regions, payload.regionId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Region was not found.", {
+          regionId: "Region was not found.",
+        })
+      }
+
+      if (payload.areaId && !(await lookupExists(tx, areas, payload.areaId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Area was not found.", {
+          areaId: "Area was not found.",
+        })
+      }
+
+      if (payload.featuredFileId && !(await lookupExists(tx, files, payload.featuredFileId))) {
+        return buildFailure("LOOKUP_NOT_FOUND", "Featured file was not found.", {
+          featuredFileId: "Featured file was not found.",
+        })
+      }
+
+      const rows = await tx
+        .update(projects)
+        .set({
+          name: payload.name,
+          slug: payload.slug,
+          displayName: payload.displayName,
+          legalName: payload.legalName,
+          description: payload.description,
+          developerId: payload.developerId,
+          propertyCategoryId: payload.propertyCategoryId,
+          propertyTypeId: payload.propertyTypeId,
+          projectStatusId: payload.projectStatusId,
+          tenureTypeId: payload.tenureTypeId,
+          titleTypeId: payload.titleTypeId,
+          regionId: payload.regionId,
+          areaId: payload.areaId,
+          address: payload.address,
+          latitude: payload.latitude,
+          longitude: payload.longitude,
+          landAreaAcres: payload.landAreaAcres,
+          totalUnits: payload.totalUnits,
+          launchYear: payload.launchYear,
+          isPublished: payload.isPublished,
+          featuredFileId: payload.featuredFileId,
+          updatedAt: new Date(),
+        })
+        .where(eq(projects.id, projectId))
+        .returning({
+          id: projects.id,
+          slug: projects.slug,
+          name: projects.name,
+          isPublished: projects.isPublished,
+        })
+
+      const updated = rows[0]
+      if (!updated) {
+        return buildFailure("UPDATE_FAILED", "Project could not be updated.")
+      }
+
+      try {
+        await writeProjectAudit(tx, {
+          mode: "update",
+          actorUserId,
+          actorRoleId: authContext.roleId,
+          previous: buildSafeProjectAuditSnapshot({
+            projectId: existingProject.id,
+            name: existingProject.name,
+            slug: existingProject.slug,
+            isPublished: existingProject.isPublished,
+          }),
+          next: buildSafeProjectAuditSnapshot({
+            projectId: updated.id,
+            name: updated.name,
+            slug: updated.slug,
+            isPublished: updated.isPublished,
+          }),
+        })
+      } catch {
+        throw new AuditWriteFailedError()
+      }
+
+      return {
+        ok: true,
+        projectId: updated.id,
+        slug: updated.slug,
+      }
+    })
   } catch {
     return buildFailure("UPDATE_FAILED", "Project could not be updated.")
   }

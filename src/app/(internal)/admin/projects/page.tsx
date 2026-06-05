@@ -166,8 +166,8 @@ export default async function AdminProjectsPage({ searchParams }: ProjectsPagePr
             <span>
               Showing {result.projects.length} of {result.total} projects.
             </span>
-            <Button type="button" size="sm" variant="outline" disabled>
-              Create project (Coming soon)
+            <Button asChild size="sm" variant="outline">
+              <Link href={ROUTES.admin.projectsNew}>Create Project</Link>
             </Button>
           </div>
 

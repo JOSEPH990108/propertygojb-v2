@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import {
   Table,
   TableBody,
@@ -6,8 +8,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 import { ProjectPublishBadge } from "@/components/admin/projects/project-publish-badge"
 import { ProjectStatusBadge } from "@/components/admin/projects/project-status-badge"
+import { ROUTES } from "@/config/routes"
 import type { AdminProjectListItem } from "@/lib/admin/projects/actions"
 
 type AdminProjectsTableProps = {
@@ -72,6 +76,7 @@ export function AdminProjectsTable({ projects }: AdminProjectsTableProps) {
           <TableHead>Launch Year</TableHead>
           <TableHead>Created</TableHead>
           <TableHead>Updated</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -100,6 +105,11 @@ export function AdminProjectsTable({ projects }: AdminProjectsTableProps) {
             <TableCell>{project.launchYear ?? "-"}</TableCell>
             <TableCell>{formatDateTime(project.createdAt)}</TableCell>
             <TableCell>{formatDateTime(project.updatedAt)}</TableCell>
+            <TableCell>
+              <Button asChild size="sm" variant="outline">
+                <Link href={ROUTES.admin.projectEdit(project.id)}>Edit</Link>
+              </Button>
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

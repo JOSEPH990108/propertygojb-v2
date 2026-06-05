@@ -20,6 +20,8 @@ export const ROUTES = {
     dashboard: "/admin",
     users: "/admin/users",
     projects: "/admin/projects",
+    projectsNew: "/admin/projects/new",
+    projectEdit: (id: string) => `/admin/projects/${id}/edit`,
     properties: "/admin/properties",
     leads: "/admin/leads",
     agents: "/admin/agents",

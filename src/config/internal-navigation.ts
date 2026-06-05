@@ -37,8 +37,7 @@ export const ADMIN_INTERNAL_NAVIGATION: readonly InternalNavigationItem[] = [
     label: "Projects",
     href: ROUTES.admin.projects,
     iconKey: "building-2",
-    isPlaceholder: true,
-    description: "Future placeholder",
+    isPlaceholder: false,
     matchPaths: [ROUTES.admin.projects],
   },
   {

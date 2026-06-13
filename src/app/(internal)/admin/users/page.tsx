@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { ROUTES } from "@/config/routes"
 import { listAdminUsers } from "@/lib/admin/users/actions"
-import { requireRole } from "@/lib/auth/guards"
 
 type UsersPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
@@ -34,17 +33,6 @@ function parsePage(value: string): number {
 }
 
 export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
-  const authContext = await requireRole(["ADMIN", "SUPER_ADMIN"], {
-    nextPath: ROUTES.admin.users,
-  })
-
-  const actorUserId =
-    authContext.user && typeof authContext.user === "object" && typeof (authContext.user as { id?: unknown }).id === "string"
-      ? (authContext.user as { id: string }).id
-      : ""
-
-  const actorRole = authContext.roleCode === "SUPER_ADMIN" ? "SUPER_ADMIN" : "ADMIN"
-
   const params = (await searchParams) ?? {}
   const search = getQueryValue(params.q).trim()
   const roleFilter = getQueryValue(params.role).trim().toUpperCase()
@@ -62,7 +50,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
   const nextPage = Math.min(totalPages, result.page + 1)
 
   return (
-    <section className="mx-auto w-full max-w-6xl space-y-4">
+    <section className="internal-page">
       <Card>
         <CardHeader>
           <CardTitle>User Management</CardTitle>
@@ -80,7 +68,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
             <select
               name="role"
               defaultValue={result.role}
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              className="internal-form-select"
             >
               <option value="ALL">All roles</option>
               <option value="CUSTOMER">CUSTOMER</option>
@@ -100,9 +88,9 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
             Showing {result.users.length} of {result.total} users.
           </div>
 
-          <AdminUsersTable users={result.users} actorRole={actorRole} actorUserId={actorUserId} />
+          <AdminUsersTable users={result.users} />
 
-          <div className="flex items-center justify-between border-t pt-3 text-sm text-muted-foreground">
+          <div className="internal-divider flex items-center justify-between text-sm text-muted-foreground">
             <span>
               Page {result.page} of {totalPages}
             </span>

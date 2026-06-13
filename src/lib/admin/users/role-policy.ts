@@ -2,6 +2,7 @@ import "server-only"
 
 export type AssignInternalRole = "CUSTOMER" | "AGENT" | "ADMIN"
 export type AssignRoleCode = AssignInternalRole | "SUPER_ADMIN"
+export type InternalActorRole = "ADMIN" | "SUPER_ADMIN"
 
 export type RoleChangeFailureCode =
   | "UNAUTHENTICATED"
@@ -15,9 +16,16 @@ export type RoleChangeFailureCode =
   | "ROLE_CHANGE_NOT_ALLOWED"
 
 type EvaluateRoleChangeInput = {
-  actorRole: "ADMIN" | "SUPER_ADMIN"
+  actorRole: InternalActorRole
   previousRole: AssignRoleCode
   targetRole: AssignInternalRole
+}
+
+type ResolveRoleChangePermissionInput = {
+  actorRole: InternalActorRole
+  previousRole: AssignRoleCode | null
+  actorUserId?: string
+  targetUserId?: string
 }
 
 type AllowedRoleChange = {
@@ -32,6 +40,104 @@ type DeniedRoleChange = {
 
 export type EvaluateRoleChangeResult = AllowedRoleChange | DeniedRoleChange
 
+export type RoleChangePermissionPreview = {
+  canChange: boolean
+  assignableRoles: readonly AssignInternalRole[]
+  code?: RoleChangeFailureCode
+  message?: string
+}
+
+function buildPermissionDenied(
+  code: RoleChangeFailureCode,
+  message: string,
+): RoleChangePermissionPreview {
+  return {
+    canChange: false,
+    assignableRoles: [],
+    code,
+    message,
+  }
+}
+
+export function resolveAssignableRolesForTarget(input: {
+  actorRole: InternalActorRole
+  previousRole: AssignRoleCode
+}): readonly AssignInternalRole[] {
+  const { actorRole, previousRole } = input
+
+  if (previousRole === "SUPER_ADMIN") {
+    return []
+  }
+
+  if (actorRole === "ADMIN") {
+    if (previousRole === "CUSTOMER") {
+      return ["AGENT"]
+    }
+
+    if (previousRole === "AGENT") {
+      return ["CUSTOMER"]
+    }
+
+    return []
+  }
+
+  if (previousRole === "CUSTOMER") {
+    return ["AGENT", "ADMIN"]
+  }
+
+  if (previousRole === "AGENT") {
+    return ["CUSTOMER", "ADMIN"]
+  }
+
+  if (previousRole === "ADMIN") {
+    return ["CUSTOMER", "AGENT"]
+  }
+
+  return []
+}
+
+export function resolveRoleChangePermissionPreview(
+  input: ResolveRoleChangePermissionInput,
+): RoleChangePermissionPreview {
+  const { actorRole, previousRole, actorUserId, targetUserId } = input
+
+  if (actorUserId && targetUserId && actorUserId === targetUserId) {
+    return buildPermissionDenied("SELF_ROLE_CHANGE_BLOCKED", "You cannot modify your own role.")
+  }
+
+  if (!previousRole) {
+    return buildPermissionDenied(
+      "ROLE_CHANGE_NOT_ALLOWED",
+      "Current target role is not eligible for this action.",
+    )
+  }
+
+  if (previousRole === "SUPER_ADMIN") {
+    return buildPermissionDenied(
+      "SUPER_ADMIN_TARGET_BLOCKED",
+      "Changing a SUPER_ADMIN target is blocked in MVP.",
+    )
+  }
+
+  const assignableRoles = resolveAssignableRolesForTarget({
+    actorRole,
+    previousRole,
+  })
+
+  if (assignableRoles.length === 0) {
+    if (actorRole === "ADMIN") {
+      return buildPermissionDenied("ROLE_CHANGE_NOT_ALLOWED", "ADMIN cannot modify ADMIN users.")
+    }
+
+    return buildPermissionDenied("ROLE_CHANGE_NOT_ALLOWED", "This role change is not allowed.")
+  }
+
+  return {
+    canChange: true,
+    assignableRoles,
+  }
+}
+
 export function evaluateRoleChange(input: EvaluateRoleChangeInput): EvaluateRoleChangeResult {
   const { actorRole, previousRole, targetRole } = input
 
@@ -43,51 +149,28 @@ export function evaluateRoleChange(input: EvaluateRoleChangeInput): EvaluateRole
     }
   }
 
-  if (previousRole === "SUPER_ADMIN") {
+  const permission = resolveRoleChangePermissionPreview({
+    actorRole,
+    previousRole,
+  })
+
+  if (!permission.canChange) {
     return {
       allowed: false,
-      code: "SUPER_ADMIN_TARGET_BLOCKED",
-      message: "Changing a SUPER_ADMIN target is blocked in MVP.",
+      code: permission.code ?? "ROLE_CHANGE_NOT_ALLOWED",
+      message: permission.message ?? "This role change is not allowed.",
     }
   }
 
-  if (actorRole === "ADMIN") {
-    if (previousRole === "ADMIN") {
-      return {
-        allowed: false,
-        code: "ROLE_CHANGE_NOT_ALLOWED",
-        message: "ADMIN cannot modify ADMIN users.",
-      }
-    }
-
-    if (previousRole === "CUSTOMER" && targetRole === "AGENT") {
-      return {
-        allowed: true,
-      }
-    }
-
-    if (targetRole === "CUSTOMER" && previousRole === "AGENT") {
-      return {
-        allowed: true,
-      }
-    }
-
+  if (!permission.assignableRoles.includes(targetRole)) {
     return {
       allowed: false,
       code: "ROLE_CHANGE_NOT_ALLOWED",
-      message: "This role change is not allowed for ADMIN.",
-    }
-  }
-
-  if (targetRole === "ADMIN" || targetRole === "AGENT" || targetRole === "CUSTOMER") {
-    return {
-      allowed: true,
+      message: `This role change is not allowed for ${actorRole}.`,
     }
   }
 
   return {
-    allowed: false,
-    code: "ROLE_CHANGE_NOT_ALLOWED",
-    message: "This role change is not allowed.",
+    allowed: true,
   }
 }

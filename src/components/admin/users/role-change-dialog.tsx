@@ -20,16 +20,17 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import type { AdminUserListItem } from "@/lib/admin/users/actions"
 import { assignInternalUserRoleAction } from "@/lib/admin/users/server-actions"
 
 type RoleCode = "CUSTOMER" | "AGENT" | "ADMIN" | "SUPER_ADMIN" | null
+type RoleChangePermission = AdminUserListItem["roleChangePermission"]
 
 type RoleChangeDialogProps = {
-  actorRole: "ADMIN" | "SUPER_ADMIN"
-  actorUserId: string
   userId: string
   userName: string
   currentRole: RoleCode
+  roleChangePermission: RoleChangePermission
 }
 
 type AssignableRole = "CUSTOMER" | "AGENT" | "ADMIN"
@@ -39,27 +40,6 @@ const ROLE_LABEL: Record<Exclude<RoleCode, null>, string> = {
   AGENT: "AGENT",
   ADMIN: "ADMIN",
   SUPER_ADMIN: "SUPER_ADMIN",
-}
-
-function getAllowedRoles(actorRole: "ADMIN" | "SUPER_ADMIN"): AssignableRole[] {
-  if (actorRole === "ADMIN") {
-    return ["CUSTOMER", "AGENT"]
-  }
-
-  return ["CUSTOMER", "AGENT", "ADMIN"]
-}
-
-function getFilteredRoleOptions(
-  actorRole: "ADMIN" | "SUPER_ADMIN",
-  currentRole: RoleCode,
-): AssignableRole[] {
-  const base = getAllowedRoles(actorRole)
-
-  if (!currentRole || currentRole === "SUPER_ADMIN") {
-    return []
-  }
-
-  return base.filter((role) => role !== currentRole)
 }
 
 function getSafeMessage(code: string, fallback: string): string {
@@ -90,11 +70,10 @@ function getSafeMessage(code: string, fallback: string): string {
 }
 
 export function RoleChangeDialog({
-  actorRole,
-  actorUserId,
   userId,
   userName,
   currentRole,
+  roleChangePermission,
 }: RoleChangeDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [targetRole, setTargetRole] = useState<AssignableRole | "">("")
@@ -104,17 +83,17 @@ export function RoleChangeDialog({
   const [isPending, startTransition] = useTransition()
 
   const roleOptions = useMemo(
-    () => getFilteredRoleOptions(actorRole, currentRole),
-    [actorRole, currentRole],
+    () => [...roleChangePermission.allowedTargetRoles],
+    [roleChangePermission.allowedTargetRoles],
   )
 
-  const isSelf = actorUserId === userId
-  const isAdminTargetBlockedForAdminActor = actorRole === "ADMIN" && currentRole === "ADMIN"
-  const disabledByPolicy =
-    isSelf ||
-    currentRole === "SUPER_ADMIN" ||
-    isAdminTargetBlockedForAdminActor ||
-    roleOptions.length === 0
+  const disabledByPolicy = !roleChangePermission.canChange || roleOptions.length === 0
+
+  const blockedMessage = getSafeMessage(
+    roleChangePermission.blockedReasonCode ?? "ROLE_CHANGE_NOT_ALLOWED",
+    roleChangePermission.blockedReasonMessage
+      ?? "Role change is not available for this row based on current policy constraints.",
+  )
 
   const canSubmit = !disabledByPolicy && !!targetRole && reasonNote.trim().length > 0 && !isPending
 
@@ -161,10 +140,21 @@ export function RoleChangeDialog({
     })
   }
 
+  if (disabledByPolicy) {
+    return (
+      <div className="space-y-1">
+        <Button size="sm" variant="outline" disabled>
+          Change Role
+        </Button>
+        <p className="text-xs text-muted-foreground">{blockedMessage}</p>
+      </div>
+    )
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" disabled={disabledByPolicy}>
+        <Button size="sm" variant="outline">
           Change Role
         </Button>
       </DialogTrigger>
@@ -186,7 +176,7 @@ export function RoleChangeDialog({
             <Select
               value={targetRole}
               onValueChange={(value) => setTargetRole(value as AssignableRole)}
-              disabled={disabledByPolicy || isPending}
+              disabled={isPending}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select target role" />
@@ -207,17 +197,12 @@ export function RoleChangeDialog({
               value={reasonNote}
               onChange={(event) => setReasonNote(event.target.value)}
               placeholder="Provide reason for this role change"
-              disabled={disabledByPolicy || isPending}
+              disabled={isPending}
             />
           </div>
 
           {errorMessage ? <p className="text-xs text-destructive">{errorMessage}</p> : null}
           {message ? <p className="text-xs text-emerald-600">{message}</p> : null}
-          {disabledByPolicy ? (
-            <p className="text-xs text-muted-foreground">
-              Role change is not available for this row based on current policy constraints.
-            </p>
-          ) : null}
         </div>
 
         <DialogFooter>

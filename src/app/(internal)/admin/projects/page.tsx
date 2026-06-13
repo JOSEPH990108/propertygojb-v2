@@ -103,7 +103,7 @@ export default async function AdminProjectsPage({ searchParams }: ProjectsPagePr
   })}`
 
   return (
-    <section className="mx-auto w-full max-w-6xl space-y-4">
+    <section className="internal-page">
       <Card>
         <CardHeader>
           <CardTitle>Projects</CardTitle>
@@ -124,7 +124,7 @@ export default async function AdminProjectsPage({ searchParams }: ProjectsPagePr
             <select
               name="status"
               defaultValue={result.status}
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              className="internal-form-select"
             >
               <option value="ALL">All statuses</option>
               {result.statusOptions.map((option) => (
@@ -136,7 +136,7 @@ export default async function AdminProjectsPage({ searchParams }: ProjectsPagePr
             <select
               name="published"
               defaultValue={result.published}
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              className="internal-form-select"
             >
               <option value="ALL">All publish states</option>
               <option value="PUBLISHED">Published</option>
@@ -145,7 +145,7 @@ export default async function AdminProjectsPage({ searchParams }: ProjectsPagePr
             <select
               name="category"
               defaultValue={result.category}
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              className="internal-form-select"
             >
               <option value="ALL">All categories</option>
               {result.categoryOptions.map((option) => (
@@ -173,7 +173,7 @@ export default async function AdminProjectsPage({ searchParams }: ProjectsPagePr
 
           <AdminProjectsTable projects={result.projects} />
 
-          <div className="flex items-center justify-between border-t pt-3 text-sm text-muted-foreground">
+          <div className="internal-divider flex items-center justify-between text-sm text-muted-foreground">
             <span>
               Page {result.page} of {totalPages}
             </span>

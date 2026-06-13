@@ -1,13 +1,14 @@
 import "server-only"
 
-import { and, asc, desc, eq, ilike, ne, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, isNull, ne, or, sql, type SQL } from "drizzle-orm"
 
 import { ROUTES } from "@/config/routes"
 import { db } from "@/db"
-import { developers, projects } from "@/db/schema/catalog"
+import { developers, projectMedia, projects } from "@/db/schema/catalog"
 import { files } from "@/db/schema/files"
 import { areas, regions } from "@/db/schema/geo"
 import {
+  mediaTypes,
   projectStatuses,
   propertyCategories,
   propertyTypes,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/admin/projects/validation"
 import {
   buildSafeProjectAuditSnapshot,
+  writeProjectMediaAudit,
   writeProjectAudit,
 } from "@/lib/admin/projects/audit"
 import { requireRole } from "@/lib/auth/guards"
@@ -96,8 +98,10 @@ export type AdminProjectFormOptions = {
   propertyTypes: AdminProjectPropertyTypeOption[]
   tenureTypes: AdminProjectFormOption[]
   titleTypes: AdminProjectFormOption[]
+  mediaTypes: AdminProjectFormOption[]
   regions: AdminProjectFormOption[]
   areas: AdminProjectAreaOption[]
+  featuredFiles: AdminProjectFormOption[]
 }
 
 export type AdminProjectEditable = {
@@ -153,6 +157,79 @@ export type AdminProjectMutationFailure = {
 export type AdminProjectMutationResult =
   | AdminProjectMutationSuccess
   | AdminProjectMutationFailure
+
+export type AdminProjectMediaListItem = {
+  id: string
+  projectId: string
+  fileId: string
+  mediaTypeId: string | null
+  mediaTypeCode: string | null
+  mediaTypeName: string | null
+  caption: string | null
+  sortOrder: number
+  fileKey: string | null
+  fileUrl: string | null
+  fileMimeType: string | null
+  fileScanStatus: string | null
+  fileVisibilityScope: string | null
+  fileDeletedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type ListAdminProjectMediaResult =
+  | {
+      ok: true
+      items: AdminProjectMediaListItem[]
+    }
+  | {
+      ok: false
+      code: "VALIDATION_FAILED" | "PROJECT_NOT_FOUND"
+      message: string
+      fieldErrors?: ProjectFieldErrors
+    }
+
+export type AttachAdminProjectMediaInput = {
+  projectId: unknown
+  fileId: unknown
+  mediaTypeId?: unknown
+  caption?: unknown
+  sortOrder?: unknown
+}
+
+export type RemoveAdminProjectMediaInput = {
+  projectId: unknown
+  projectMediaId: unknown
+}
+
+export type AdminProjectMediaMutationFailureCode =
+  | "UNAUTHENTICATED"
+  | "FORBIDDEN"
+  | "VALIDATION_FAILED"
+  | "PROJECT_NOT_FOUND"
+  | "FILE_NOT_FOUND"
+  | "MEDIA_TYPE_NOT_FOUND"
+  | "PROJECT_MEDIA_NOT_FOUND"
+  | "PROJECT_MEDIA_ALREADY_LINKED"
+  | "ATTACH_FAILED"
+  | "REMOVE_FAILED"
+
+export type AdminProjectMediaMutationSuccess = {
+  ok: true
+  projectId: string
+  projectMediaId: string
+}
+
+export type AdminProjectMediaMutationFailure = {
+  ok: false
+  code: AdminProjectMediaMutationFailureCode
+  message: string
+  fieldErrors?: ProjectFieldErrors
+}
+
+export type AdminProjectMediaMutationResult =
+  | AdminProjectMediaMutationSuccess
+  | AdminProjectMediaMutationFailure
 
 export type GetAdminProjectByIdResult =
   | {
@@ -216,6 +293,19 @@ function buildFailure(
   }
 }
 
+function buildProjectMediaFailure(
+  code: AdminProjectMediaMutationFailureCode,
+  message: string,
+  fieldErrors?: ProjectFieldErrors,
+): AdminProjectMediaMutationFailure {
+  return {
+    ok: false,
+    code,
+    message,
+    fieldErrors,
+  }
+}
+
 function normalizeProjectId(value: unknown): string | null {
   if (typeof value !== "string") {
     return null
@@ -223,6 +313,61 @@ function normalizeProjectId(value: unknown): string | null {
 
   const normalized = value.trim()
   return normalized ? normalized : null
+}
+
+function normalizeOptionalText(value: unknown, maxLength: number): string | null | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+
+  if (value === null) {
+    return null
+  }
+
+  if (typeof value !== "string") {
+    return undefined
+  }
+
+  const normalized = value.trim()
+  if (!normalized) {
+    return null
+  }
+
+  if (normalized.length <= maxLength) {
+    return normalized
+  }
+
+  return normalized.slice(0, maxLength)
+}
+
+function normalizeOptionalInteger(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || !Number.isInteger(value)) {
+      return undefined
+    }
+
+    return value
+  }
+
+  if (typeof value !== "string") {
+    return undefined
+  }
+
+  const normalized = value.trim()
+  if (!normalized) {
+    return undefined
+  }
+
+  if (!/^-?\d+$/.test(normalized)) {
+    return undefined
+  }
+
+  const parsed = Number.parseInt(normalized, 10)
+  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 function resolveActorUserId(value: unknown): string | null {
@@ -292,6 +437,84 @@ async function lookupExists(
     .limit(1)
 
   return rows.length > 0
+}
+
+type ActiveProjectSnapshot = {
+  id: string
+  name: string
+  slug: string
+  isPublished: boolean
+}
+
+async function getActiveProjectSnapshot(
+  client: SelectClient,
+  projectId: string,
+): Promise<ActiveProjectSnapshot | null> {
+  const rows = await client
+    .select({
+      id: projects.id,
+      name: projects.name,
+      slug: projects.slug,
+      isPublished: projects.isPublished,
+    })
+    .from(projects)
+    .where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
+    .limit(1)
+
+  return rows[0] ?? null
+}
+
+type ActiveFileRecord = {
+  id: string
+  key: string
+  mimeType: string | null
+  scanStatus: string
+  visibilityScope: string
+}
+
+async function getActiveFileRecord(client: SelectClient, fileId: string): Promise<ActiveFileRecord | null> {
+  const rows = await client
+    .select({
+      id: files.id,
+      key: files.key,
+      mimeType: files.mimeType,
+      scanStatus: files.scanStatus,
+      visibilityScope: files.visibilityScope,
+    })
+    .from(files)
+    .where(and(eq(files.id, fileId), isNull(files.deletedAt)))
+    .limit(1)
+
+  return rows[0] ?? null
+}
+
+type ActiveMediaTypeRecord = {
+  id: string
+  code: string
+  name: string
+}
+
+async function getActiveMediaTypeRecord(
+  client: SelectClient,
+  mediaTypeId: string,
+): Promise<ActiveMediaTypeRecord | null> {
+  const rows = await client
+    .select({
+      id: mediaTypes.id,
+      code: mediaTypes.code,
+      name: mediaTypes.name,
+    })
+    .from(mediaTypes)
+    .where(
+      and(
+        eq(mediaTypes.id, mediaTypeId),
+        isNull(mediaTypes.deletedAt),
+        eq(mediaTypes.isActive, true),
+      ),
+    )
+    .limit(1)
+
+  return rows[0] ?? null
 }
 
 function toEditableProjectInput(project: AdminProjectEditable, input: ProjectMutationInput): ProjectMutationInput {
@@ -501,8 +724,10 @@ export async function getAdminProjectFormOptions(): Promise<AdminProjectFormOpti
       propertyTypes: [],
       tenureTypes: [],
       titleTypes: [],
+      mediaTypes: [],
       regions: [],
       areas: [],
+      featuredFiles: [],
     }
   }
 
@@ -513,8 +738,10 @@ export async function getAdminProjectFormOptions(): Promise<AdminProjectFormOpti
     propertyTypeRows,
     tenureTypeRows,
     titleTypeRows,
+    mediaTypeRows,
     regionRows,
     areaRows,
+    featuredFileRows,
   ] = await Promise.all([
     db
       .select({
@@ -567,6 +794,15 @@ export async function getAdminProjectFormOptions(): Promise<AdminProjectFormOpti
       .orderBy(asc(titleTypes.sortOrder), asc(titleTypes.name)),
     db
       .select({
+        id: mediaTypes.id,
+        code: mediaTypes.code,
+        name: mediaTypes.name,
+      })
+      .from(mediaTypes)
+      .where(and(isNull(mediaTypes.deletedAt), eq(mediaTypes.isActive, true)))
+      .orderBy(asc(mediaTypes.sortOrder), asc(mediaTypes.name)),
+    db
+      .select({
         id: regions.id,
         code: regions.slug,
         name: regions.name,
@@ -582,6 +818,16 @@ export async function getAdminProjectFormOptions(): Promise<AdminProjectFormOpti
       })
       .from(areas)
       .orderBy(asc(areas.name)),
+    db
+      .select({
+        id: files.id,
+        code: files.mimeType,
+        name: files.key,
+      })
+      .from(files)
+      .where(isNull(files.deletedAt))
+      .orderBy(desc(files.createdAt))
+      .limit(200),
   ])
 
   return {
@@ -591,8 +837,10 @@ export async function getAdminProjectFormOptions(): Promise<AdminProjectFormOpti
     propertyTypes: propertyTypeRows,
     tenureTypes: tenureTypeRows,
     titleTypes: titleTypeRows,
+    mediaTypes: mediaTypeRows,
     regions: regionRows,
     areas: areaRows,
+    featuredFiles: featuredFileRows,
   }
 }
 
@@ -1076,5 +1324,384 @@ export async function updateAdminProject(input: ProjectMutationInput): Promise<A
     })
   } catch {
     return buildFailure("UPDATE_FAILED", "Project could not be updated.")
+  }
+}
+
+export async function listAdminProjectMedia(projectId: string): Promise<ListAdminProjectMediaResult> {
+  await requireRole(["ADMIN", "SUPER_ADMIN"], {
+    nextPath: ROUTES.admin.projects,
+  })
+
+  const normalizedProjectId = normalizeProjectId(projectId)
+  if (!normalizedProjectId) {
+    return {
+      ok: false,
+      code: "VALIDATION_FAILED",
+      message: "Project id is required.",
+      fieldErrors: {
+        projectId: "Project id is required.",
+      },
+    }
+  }
+
+  if (!db) {
+    return {
+      ok: true,
+      items: [],
+    }
+  }
+
+  const project = await getActiveProjectSnapshot(db, normalizedProjectId)
+  if (!project) {
+    return {
+      ok: false,
+      code: "PROJECT_NOT_FOUND",
+      message: "Project was not found.",
+    }
+  }
+
+  const rows = await db
+    .select({
+      id: projectMedia.id,
+      projectId: projectMedia.projectId,
+      fileId: projectMedia.fileId,
+      mediaTypeId: projectMedia.mediaTypeId,
+      caption: projectMedia.caption,
+      sortOrder: projectMedia.sortOrder,
+      createdAt: projectMedia.createdAt,
+      updatedAt: projectMedia.updatedAt,
+      mediaTypeCode: mediaTypes.code,
+      mediaTypeName: mediaTypes.name,
+      fileKey: files.key,
+      fileUrl: files.url,
+      fileMimeType: files.mimeType,
+      fileScanStatus: files.scanStatus,
+      fileVisibilityScope: files.visibilityScope,
+      fileDeletedAt: files.deletedAt,
+    })
+    .from(projectMedia)
+    .leftJoin(files, eq(projectMedia.fileId, files.id))
+    .leftJoin(mediaTypes, eq(projectMedia.mediaTypeId, mediaTypes.id))
+    .where(and(eq(projectMedia.projectId, normalizedProjectId), isNull(projectMedia.deletedAt)))
+    .orderBy(asc(projectMedia.sortOrder), desc(projectMedia.createdAt))
+
+  return {
+    ok: true,
+    items: rows.map((row) => ({
+      id: row.id,
+      projectId: row.projectId,
+      fileId: row.fileId,
+      mediaTypeId: row.mediaTypeId,
+      mediaTypeCode: row.mediaTypeCode,
+      mediaTypeName: row.mediaTypeName,
+      caption: row.caption,
+      sortOrder: row.sortOrder,
+      fileKey: row.fileKey,
+      fileUrl: row.fileUrl,
+      fileMimeType: row.fileMimeType,
+      fileScanStatus: row.fileScanStatus,
+      fileVisibilityScope: row.fileVisibilityScope,
+      fileDeletedAt: row.fileDeletedAt ? row.fileDeletedAt.toISOString() : null,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    })),
+  }
+}
+
+export async function attachAdminProjectMedia(
+  input: AttachAdminProjectMediaInput,
+): Promise<AdminProjectMediaMutationResult> {
+  const authContext = await requireRole(["ADMIN", "SUPER_ADMIN"], {
+    nextPath: ROUTES.admin.projects,
+  })
+
+  const actorUserId = resolveActorUserId(authContext.user)
+  if (!actorUserId) {
+    return buildProjectMediaFailure("UNAUTHENTICATED", "Authentication is required.")
+  }
+
+  if (!db) {
+    return buildProjectMediaFailure("ATTACH_FAILED", "Project media attach service is unavailable.")
+  }
+
+  const projectId = normalizeProjectId(input.projectId)
+  const fileId = normalizeProjectId(input.fileId)
+  const rawMediaTypeId = normalizeOptionalText(input.mediaTypeId, 200)
+  const mediaTypeId = rawMediaTypeId ? normalizeProjectId(rawMediaTypeId) : null
+  const caption = normalizeOptionalText(input.caption, 300)
+  const rawSortOrder = input.sortOrder
+  const sortOrder = normalizeOptionalInteger(rawSortOrder)
+  const hasSortOrderInput =
+    rawSortOrder !== undefined
+    && rawSortOrder !== null
+    && !(typeof rawSortOrder === "string" && rawSortOrder.trim() === "")
+
+  const fieldErrors: ProjectFieldErrors = {}
+
+  if (!projectId) {
+    fieldErrors.projectId = "Project id is required."
+  }
+
+  if (!fileId) {
+    fieldErrors.fileId = "File id is required."
+  }
+
+  if (input.mediaTypeId !== undefined && rawMediaTypeId === undefined) {
+    fieldErrors.mediaTypeId = "Media type id is invalid."
+  } else if (rawMediaTypeId && !mediaTypeId) {
+    fieldErrors.mediaTypeId = "Media type id is invalid."
+  }
+
+  if (input.caption !== undefined && caption === undefined) {
+    fieldErrors.caption = "Caption is invalid."
+  }
+
+  if (hasSortOrderInput && sortOrder === undefined) {
+    fieldErrors.sortOrder = "Sort order must be an integer."
+  } else if (sortOrder !== undefined && sortOrder < 0) {
+    fieldErrors.sortOrder = "Sort order must be 0 or greater."
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return buildProjectMediaFailure("VALIDATION_FAILED", "Project media input is invalid.", fieldErrors)
+  }
+
+  try {
+    return await db.transaction(async (tx) => {
+      const project = await getActiveProjectSnapshot(tx, projectId!)
+      if (!project) {
+        return buildProjectMediaFailure("PROJECT_NOT_FOUND", "Project was not found.", {
+          projectId: "Project was not found.",
+        })
+      }
+
+      const fileRecord = await getActiveFileRecord(tx, fileId!)
+      if (!fileRecord) {
+        return buildProjectMediaFailure("FILE_NOT_FOUND", "File was not found.", {
+          fileId: "File was not found.",
+        })
+      }
+
+      if (mediaTypeId) {
+        const mediaTypeRecord = await getActiveMediaTypeRecord(tx, mediaTypeId)
+        if (!mediaTypeRecord) {
+          return buildProjectMediaFailure("MEDIA_TYPE_NOT_FOUND", "Media type was not found.", {
+            mediaTypeId: "Media type was not found.",
+          })
+        }
+      }
+
+      const duplicateRows = await tx
+        .select({
+          id: projectMedia.id,
+        })
+        .from(projectMedia)
+        .where(
+          and(
+            eq(projectMedia.projectId, projectId!),
+            eq(projectMedia.fileId, fileId!),
+            isNull(projectMedia.deletedAt),
+          ),
+        )
+        .limit(1)
+
+      if (duplicateRows.length > 0) {
+        return buildProjectMediaFailure("PROJECT_MEDIA_ALREADY_LINKED", "File is already linked to this project.", {
+          fileId: "File is already linked to this project.",
+        })
+      }
+
+      let resolvedSortOrder = sortOrder
+      if (resolvedSortOrder === undefined) {
+        const maxRows = await tx
+          .select({
+            maxSortOrder: sql<number | null>`max(${projectMedia.sortOrder})`,
+          })
+          .from(projectMedia)
+          .where(and(eq(projectMedia.projectId, projectId!), isNull(projectMedia.deletedAt)))
+
+        const maxSortOrder = maxRows[0]?.maxSortOrder
+        resolvedSortOrder =
+          typeof maxSortOrder === "number" && Number.isFinite(maxSortOrder)
+            ? maxSortOrder + 1
+            : 0
+      }
+
+      const insertRows = await tx
+        .insert(projectMedia)
+        .values({
+          projectId: projectId!,
+          fileId: fileId!,
+          mediaTypeId: mediaTypeId ?? null,
+          caption: caption ?? null,
+          sortOrder: resolvedSortOrder,
+        })
+        .returning({
+          id: projectMedia.id,
+          projectId: projectMedia.projectId,
+          fileId: projectMedia.fileId,
+          mediaTypeId: projectMedia.mediaTypeId,
+          caption: projectMedia.caption,
+          sortOrder: projectMedia.sortOrder,
+        })
+
+      const attached = insertRows[0]
+      if (!attached) {
+        return buildProjectMediaFailure("ATTACH_FAILED", "Project media could not be attached.")
+      }
+
+      try {
+        await writeProjectMediaAudit(tx, {
+          mode: "attach",
+          actorUserId,
+          actorRoleId: authContext.roleId,
+          project: buildSafeProjectAuditSnapshot({
+            projectId: project.id,
+            name: project.name,
+            slug: project.slug,
+            isPublished: project.isPublished,
+          }),
+          media: {
+            projectMediaId: attached.id,
+            projectId: attached.projectId,
+            fileId: attached.fileId,
+            mediaTypeId: attached.mediaTypeId,
+            caption: attached.caption,
+            sortOrder: attached.sortOrder,
+          },
+        })
+      } catch {
+        throw new AuditWriteFailedError()
+      }
+
+      return {
+        ok: true,
+        projectId: attached.projectId,
+        projectMediaId: attached.id,
+      }
+    })
+  } catch {
+    return buildProjectMediaFailure("ATTACH_FAILED", "Project media could not be attached.")
+  }
+}
+
+export async function removeAdminProjectMedia(
+  input: RemoveAdminProjectMediaInput,
+): Promise<AdminProjectMediaMutationResult> {
+  const authContext = await requireRole(["ADMIN", "SUPER_ADMIN"], {
+    nextPath: ROUTES.admin.projects,
+  })
+
+  const actorUserId = resolveActorUserId(authContext.user)
+  if (!actorUserId) {
+    return buildProjectMediaFailure("UNAUTHENTICATED", "Authentication is required.")
+  }
+
+  if (!db) {
+    return buildProjectMediaFailure("REMOVE_FAILED", "Project media remove service is unavailable.")
+  }
+
+  const projectId = normalizeProjectId(input.projectId)
+  const projectMediaId = normalizeProjectId(input.projectMediaId)
+
+  const fieldErrors: ProjectFieldErrors = {}
+
+  if (!projectId) {
+    fieldErrors.projectId = "Project id is required."
+  }
+
+  if (!projectMediaId) {
+    fieldErrors.projectMediaId = "Project media id is required."
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return buildProjectMediaFailure("VALIDATION_FAILED", "Project media input is invalid.", fieldErrors)
+  }
+
+  try {
+    return await db.transaction(async (tx) => {
+      const project = await getActiveProjectSnapshot(tx, projectId!)
+      if (!project) {
+        return buildProjectMediaFailure("PROJECT_NOT_FOUND", "Project was not found.", {
+          projectId: "Project was not found.",
+        })
+      }
+
+      const existingRows = await tx
+        .select({
+          id: projectMedia.id,
+          projectId: projectMedia.projectId,
+          fileId: projectMedia.fileId,
+          mediaTypeId: projectMedia.mediaTypeId,
+          caption: projectMedia.caption,
+          sortOrder: projectMedia.sortOrder,
+        })
+        .from(projectMedia)
+        .where(
+          and(
+            eq(projectMedia.id, projectMediaId!),
+            eq(projectMedia.projectId, projectId!),
+            isNull(projectMedia.deletedAt),
+          ),
+        )
+        .limit(1)
+
+      const existing = existingRows[0]
+      if (!existing) {
+        return buildProjectMediaFailure("PROJECT_MEDIA_NOT_FOUND", "Project media was not found.", {
+          projectMediaId: "Project media was not found.",
+        })
+      }
+
+      const now = new Date()
+      const removeRows = await tx
+        .update(projectMedia)
+        .set({
+          deletedAt: now,
+          updatedAt: now,
+        })
+        .where(and(eq(projectMedia.id, projectMediaId!), isNull(projectMedia.deletedAt)))
+        .returning({
+          id: projectMedia.id,
+          projectId: projectMedia.projectId,
+        })
+
+      const removed = removeRows[0]
+      if (!removed) {
+        return buildProjectMediaFailure("REMOVE_FAILED", "Project media could not be removed.")
+      }
+
+      try {
+        await writeProjectMediaAudit(tx, {
+          mode: "remove",
+          actorUserId,
+          actorRoleId: authContext.roleId,
+          project: buildSafeProjectAuditSnapshot({
+            projectId: project.id,
+            name: project.name,
+            slug: project.slug,
+            isPublished: project.isPublished,
+          }),
+          media: {
+            projectMediaId: existing.id,
+            projectId: existing.projectId,
+            fileId: existing.fileId,
+            mediaTypeId: existing.mediaTypeId,
+            caption: existing.caption,
+            sortOrder: existing.sortOrder,
+          },
+        })
+      } catch {
+        throw new AuditWriteFailedError()
+      }
+
+      return {
+        ok: true,
+        projectId: removed.projectId,
+        projectMediaId: removed.id,
+      }
+    })
+  } catch {
+    return buildProjectMediaFailure("REMOVE_FAILED", "Project media could not be removed.")
   }
 }

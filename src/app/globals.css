@@ -128,3 +128,325 @@
     @apply font-sans;
   }
 }
+
+@keyframes public-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes public-atmosphere-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -2%, 0) scale(1.03);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes internal-fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes internal-atmosphere-shift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -1.5%, 0) scale(1.02);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@layer utilities {
+  .public-shell {
+    --public-surface-0: oklch(0.985 0.004 255);
+    --public-surface-1: oklch(0.972 0.01 250);
+    --public-surface-2: oklch(0.953 0.018 246);
+    --public-accent-strong: oklch(0.46 0.16 257);
+    --public-accent-soft: oklch(0.73 0.08 252);
+    --public-signal: oklch(0.74 0.14 84);
+    position: relative;
+    isolation: isolate;
+    background: linear-gradient(168deg, var(--public-surface-0) 0%, var(--public-surface-1) 58%, var(--public-surface-2) 100%);
+  }
+
+  .public-shell::before {
+    content: "";
+    position: fixed;
+    inset: -32vmax;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 0.75;
+    background:
+      radial-gradient(42vmax 42vmax at 10% 14%, color-mix(in oklab, var(--public-accent-soft) 36%, transparent), transparent 68%),
+      radial-gradient(36vmax 36vmax at 86% 8%, color-mix(in oklab, var(--public-signal) 24%, transparent), transparent 66%),
+      radial-gradient(38vmax 38vmax at 76% 78%, color-mix(in oklab, var(--public-accent-strong) 22%, transparent), transparent 70%);
+    animation: public-atmosphere-drift 16s ease-in-out infinite;
+  }
+
+  .public-shell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.55;
+    background-image:
+      linear-gradient(transparent 97%, color-mix(in oklab, var(--public-accent-soft) 18%, transparent) 97%),
+      linear-gradient(90deg, transparent 97%, color-mix(in oklab, var(--public-accent-soft) 14%, transparent) 97%);
+    background-size: 38px 38px;
+  }
+
+  .public-heading {
+    font-family: var(--font-public-heading), var(--font-geist-sans), sans-serif;
+    letter-spacing: -0.018em;
+  }
+
+  .public-copy {
+    font-family: var(--font-public-body), var(--font-geist-sans), sans-serif;
+  }
+
+  .public-panel {
+    @apply rounded-3xl border border-border/80 bg-card/88 shadow-[0_20px_48px_-32px_rgba(15,23,42,0.45)] backdrop-blur;
+  }
+
+  .public-panel-subtle {
+    @apply rounded-2xl border border-border/70 bg-background/74 backdrop-blur;
+  }
+
+  .public-kicker {
+    @apply text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground;
+  }
+
+  .public-form-select {
+    @apply h-10 w-full rounded-xl border border-input/85 bg-background/85 px-3 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40;
+  }
+
+  .public-fade-up {
+    animation: public-fade-up 520ms ease forwards;
+  }
+
+  .public-fade-up-delay-1 {
+    animation: public-fade-up 520ms ease forwards;
+    animation-delay: 80ms;
+    opacity: 0;
+  }
+
+  .public-fade-up-delay-2 {
+    animation: public-fade-up 520ms ease forwards;
+    animation-delay: 160ms;
+    opacity: 0;
+  }
+
+  .internal-shell {
+    --internal-surface-0: oklch(0.992 0.002 216);
+    --internal-surface-1: oklch(0.982 0.006 221);
+    --internal-surface-2: oklch(0.963 0.011 226);
+    --internal-accent-cool: oklch(0.55 0.095 214);
+    --internal-accent-warm: oklch(0.72 0.114 85);
+    --internal-glow: oklch(0.79 0.08 155);
+    position: relative;
+    isolation: isolate;
+    background: linear-gradient(165deg, var(--internal-surface-0) 0%, var(--internal-surface-1) 62%, var(--internal-surface-2) 100%);
+  }
+
+  .internal-shell::before {
+    content: "";
+    position: fixed;
+    inset: -34vmax;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 0.72;
+    background:
+      radial-gradient(36vmax 36vmax at 14% 12%, color-mix(in oklab, var(--internal-accent-cool) 30%, transparent), transparent 70%),
+      radial-gradient(34vmax 34vmax at 84% 8%, color-mix(in oklab, var(--internal-accent-warm) 20%, transparent), transparent 68%),
+      radial-gradient(40vmax 40vmax at 78% 84%, color-mix(in oklab, var(--internal-glow) 24%, transparent), transparent 72%);
+    animation: internal-atmosphere-shift 18s ease-in-out infinite;
+  }
+
+  .internal-shell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.45;
+    background-image:
+      linear-gradient(transparent 95%, color-mix(in oklab, var(--internal-accent-cool) 10%, transparent) 95%),
+      linear-gradient(90deg, transparent 95%, color-mix(in oklab, var(--internal-accent-cool) 10%, transparent) 95%);
+    background-size: 34px 34px;
+  }
+
+  .internal-heading {
+    font-family: var(--font-internal-heading), var(--font-geist-sans), sans-serif;
+    letter-spacing: -0.015em;
+  }
+
+  .internal-copy {
+    font-family: var(--font-internal-body), var(--font-geist-sans), sans-serif;
+  }
+
+  .internal-shell [data-slot="card"] {
+    @apply rounded-3xl border border-border/80 bg-card/88 py-4 text-card-foreground shadow-[0_20px_48px_-34px_rgba(15,23,42,0.5)] ring-0;
+    backdrop-filter: blur(8px);
+  }
+
+  .internal-shell [data-slot="card-title"] {
+    font-family: var(--font-internal-heading), var(--font-geist-sans), sans-serif;
+    letter-spacing: -0.012em;
+  }
+
+  .internal-shell [data-slot="card-description"] {
+    color: color-mix(in oklab, var(--foreground) 58%, transparent);
+  }
+
+  .internal-shell [data-slot="input"],
+  .internal-shell [data-slot="textarea"],
+  .internal-shell select {
+    @apply rounded-xl border-border/80 bg-background/88 px-3;
+  }
+
+  .internal-shell [data-slot="input"] {
+    @apply h-9;
+  }
+
+  .internal-shell [data-slot="textarea"] {
+    @apply min-h-20;
+  }
+
+  .internal-shell select {
+    @apply h-9 text-sm;
+  }
+
+  .internal-shell [data-slot="button"][data-variant="outline"] {
+    @apply border-border/80 bg-background/76 hover:border-border hover:bg-background;
+  }
+
+  .internal-shell [data-slot="button"][data-variant="ghost"] {
+    @apply hover:bg-background/70 hover:text-foreground;
+  }
+
+  .internal-shell [data-slot="badge"][data-variant="outline"] {
+    @apply border-border/80 bg-background/78 text-muted-foreground;
+  }
+
+  .internal-shell [data-slot="table-container"] {
+    @apply overflow-hidden rounded-2xl border border-border/75 bg-background/80;
+  }
+
+  .internal-shell [data-slot="table"] {
+    min-width: max-content;
+  }
+
+  .internal-shell [data-slot="table-header"] [data-slot="table-row"] {
+    background: color-mix(in oklab, var(--internal-accent-cool) 10%, transparent);
+  }
+
+  .internal-shell [data-slot="table-head"] {
+    @apply h-10 text-[0.69rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+  }
+
+  .internal-shell [data-slot="table-body"] [data-slot="table-row"] {
+    border-color: color-mix(in oklab, var(--internal-accent-cool) 8%, var(--border));
+  }
+
+  .internal-shell [data-slot="table-body"] [data-slot="table-row"]:nth-child(even) {
+    background: color-mix(in oklab, var(--internal-accent-cool) 5%, transparent);
+  }
+
+  .internal-shell [data-slot="table-body"] [data-slot="table-row"]:hover {
+    background: color-mix(in oklab, var(--internal-accent-cool) 11%, transparent);
+  }
+
+  .internal-page {
+    @apply mx-auto w-full max-w-7xl space-y-5;
+  }
+
+  .internal-kicker {
+    @apply text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground;
+  }
+
+  .internal-panel {
+    @apply rounded-3xl border border-border/80 bg-card/88 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.5)] backdrop-blur;
+  }
+
+  .internal-panel-soft {
+    @apply rounded-2xl border border-border/70 bg-background/78 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.36)] backdrop-blur;
+  }
+
+  .internal-metric-tile {
+    @apply rounded-2xl border border-border/70 bg-background/82 px-4 py-3;
+  }
+
+  .internal-form-select {
+    @apply h-9 w-full rounded-xl border border-input/85 bg-background/88 px-3 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40;
+  }
+
+  .internal-table {
+    min-width: max-content;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .internal-table thead tr {
+    background: color-mix(in oklab, var(--internal-accent-cool) 10%, transparent);
+  }
+
+  .internal-table thead th {
+    @apply h-10 text-[0.69rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+  }
+
+  .internal-table tbody tr:nth-child(even) {
+    background: color-mix(in oklab, var(--internal-accent-cool) 5%, transparent);
+  }
+
+  .internal-table tbody tr:hover {
+    background: color-mix(in oklab, var(--internal-accent-cool) 11%, transparent);
+  }
+
+  .internal-table td {
+    @apply py-2.5;
+  }
+
+  .internal-empty-state {
+    @apply rounded-2xl border border-dashed border-border/70 bg-background/56 p-6 text-sm text-muted-foreground;
+  }
+
+  .internal-divider {
+    @apply border-t border-border/70 pt-4;
+  }
+
+  .internal-fade-up {
+    animation: internal-fade-rise 460ms ease forwards;
+  }
+
+  .internal-fade-up-delay-1 {
+    animation: internal-fade-rise 460ms ease forwards;
+    animation-delay: 80ms;
+    opacity: 0;
+  }
+
+  .internal-fade-up-delay-2 {
+    animation: internal-fade-rise 460ms ease forwards;
+    animation-delay: 150ms;
+    opacity: 0;
+  }
+}

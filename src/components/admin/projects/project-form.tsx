@@ -11,9 +11,13 @@ import { ROUTES } from "@/config/routes"
 import type { AdminProjectEditable, AdminProjectFormOptions } from "@/lib/admin/projects/actions"
 import {
   createAdminProjectAction,
-  INITIAL_PROJECT_FORM_ACTION_STATE,
   updateAdminProjectAction,
 } from "@/lib/admin/projects/server-actions"
+import type { ProjectFormActionState } from "@/lib/admin/projects/server-actions"
+
+const INITIAL_PROJECT_FORM_ACTION_STATE: ProjectFormActionState = {
+  fieldErrors: {},
+}
 
 type ProjectFormMode = "create" | "edit"
 
@@ -96,7 +100,7 @@ function SelectField({
         id={name}
         name={name}
         defaultValue={defaultValue ?? ""}
-        className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+        className="internal-form-select"
         aria-invalid={fieldError ? true : undefined}
       >
         <option value="">{emptyLabel}</option>
@@ -270,7 +274,7 @@ export function ProjectForm({ mode, options, project }: ProjectFormProps) {
                 id="areaId"
                 name="areaId"
                 defaultValue={project?.areaId ?? ""}
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+                className="internal-form-select"
                 aria-invalid={getFieldError(fieldErrors, "areaId") ? true : undefined}
               >
                 <option value="">No area</option>
@@ -283,6 +287,33 @@ export function ProjectForm({ mode, options, project }: ProjectFormProps) {
               </select>
               {getFieldError(fieldErrors, "areaId") ? (
                 <p className="text-xs text-destructive">{getFieldError(fieldErrors, "areaId")}</p>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="featuredFileId" className="text-sm font-medium">
+                Featured File
+              </label>
+              <select
+                id="featuredFileId"
+                name="featuredFileId"
+                defaultValue={project?.featuredFileId ?? ""}
+                className="internal-form-select"
+                aria-invalid={getFieldError(fieldErrors, "featuredFileId") ? true : undefined}
+              >
+                <option value="">No featured file</option>
+                {options.featuredFiles.map((file) => (
+                  <option key={file.id} value={file.id}>
+                    {file.name}
+                  </option>
+                ))}
+              </select>
+              {options.featuredFiles.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No files available yet. Keep this empty until file records exist.
+                </p>
+              ) : null}
+              {getFieldError(fieldErrors, "featuredFileId") ? (
+                <p className="text-xs text-destructive">{getFieldError(fieldErrors, "featuredFileId")}</p>
               ) : null}
             </div>
           </div>

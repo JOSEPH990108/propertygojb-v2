@@ -54,7 +54,7 @@ function renderTenureTitle(project: AdminProjectListItem): string {
 export function AdminProjectsTable({ projects }: AdminProjectsTableProps) {
   if (projects.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+      <div className="internal-empty-state">
         No projects found for the current filters.
       </div>
     )

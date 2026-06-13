@@ -12,8 +12,6 @@ import { RoleChangeDialog } from "@/components/admin/users/role-change-dialog"
 
 type AdminUsersTableProps = {
   users: AdminUserListItem[]
-  actorRole: "ADMIN" | "SUPER_ADMIN"
-  actorUserId: string
 }
 
 function formatDateTime(value: string): string {
@@ -25,10 +23,10 @@ function formatDateTime(value: string): string {
   }).format(date)
 }
 
-export function AdminUsersTable({ users, actorRole, actorUserId }: AdminUsersTableProps) {
+export function AdminUsersTable({ users }: AdminUsersTableProps) {
   if (users.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+      <div className="internal-empty-state">
         No users found for the current filters.
       </div>
     )
@@ -58,11 +56,10 @@ export function AdminUsersTable({ users, actorRole, actorUserId }: AdminUsersTab
             </TableCell>
             <TableCell>
               <RoleChangeDialog
-                actorRole={actorRole}
-                actorUserId={actorUserId}
                 userId={userRow.id}
                 userName={userRow.name}
                 currentRole={userRow.roleCode}
+                roleChangePermission={userRow.roleChangePermission}
               />
             </TableCell>
             <TableCell>{formatDateTime(userRow.createdAt)}</TableCell>

@@ -59,15 +59,22 @@ export function InternalNavItem({ item, compact = false }: InternalNavItemProps)
       aria-current={isActive ? "page" : undefined}
       aria-label={`${item.label}${item.isPlaceholder ? " (placeholder)" : ""}`}
       className={cn(
-        "group flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
-        isActive && "border-border bg-card text-foreground shadow-xs",
+        "group flex items-center gap-2.5 rounded-xl border border-transparent px-3 py-2.5 text-sm text-muted-foreground transition-all hover:border-border/70 hover:bg-background/82 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
+        isActive && "border-border/80 bg-background text-foreground shadow-[0_10px_22px_-16px_rgba(15,23,42,0.85)]",
         compact && "shrink-0"
       )}
     >
-      <Icon className="size-4" aria-hidden="true" />
+      <span
+        className={cn(
+          "flex size-7 items-center justify-center rounded-lg border border-border/50 bg-background/70 text-muted-foreground transition-colors",
+          isActive && "border-border/80 bg-card text-foreground",
+        )}
+      >
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
       <span className="font-medium">{item.label}</span>
       {item.isPlaceholder ? (
-        <Badge variant="outline" className="ml-auto text-[10px]">
+        <Badge variant="outline" className="ml-auto border-border/80 bg-background/70 text-[10px]">
           Soon
         </Badge>
       ) : null}

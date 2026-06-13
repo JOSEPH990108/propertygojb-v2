@@ -33,6 +33,27 @@ export type ProjectAuditActionType =
   | "PROJECT_PUBLISHED"
   | "PROJECT_UNPUBLISHED"
 
+export type ProjectMediaAuditMode = "attach" | "remove"
+
+export type ProjectMediaAuditSnapshot = {
+  projectMediaId: string
+  projectId: string
+  fileId: string
+  mediaTypeId: string | null
+  caption: string | null
+  sortOrder: number
+}
+
+type ProjectMediaAuditInput = {
+  mode: ProjectMediaAuditMode
+  actorUserId: string
+  actorRoleId?: string
+  project: ProjectAuditSnapshot
+  media: ProjectMediaAuditSnapshot
+  requestId?: string
+  traceId?: string
+}
+
 export function buildSafeProjectAuditSnapshot(input: {
   projectId: string
   name: string
@@ -139,6 +160,65 @@ export async function writeProjectAudit(
         newSlug: input.next.slug,
         newIsPublished: input.next.isPublished,
         changedFields,
+      },
+    }),
+  )
+}
+
+function resolveProjectMediaAuditAction(mode: ProjectMediaAuditMode): "PROJECT_MEDIA_ATTACHED" | "PROJECT_MEDIA_REMOVED" {
+  return mode === "attach" ? "PROJECT_MEDIA_ATTACHED" : "PROJECT_MEDIA_REMOVED"
+}
+
+export async function writeProjectMediaAudit(
+  tx: TransactionClient,
+  input: ProjectMediaAuditInput,
+): Promise<void> {
+  const actionType = resolveProjectMediaAuditAction(input.mode)
+
+  await Promise.resolve(
+    tx.insert(auditLogs).values({
+      actorUserId: input.actorUserId,
+      actorRoleId: input.actorRoleId,
+      actionType,
+      entityType: "PROJECT_MEDIA",
+      entityId: input.media.projectMediaId,
+      requestId: input.requestId,
+      traceId: input.traceId,
+      beforeJson:
+        input.mode === "remove"
+          ? {
+              projectId: input.media.projectId,
+              fileId: input.media.fileId,
+              mediaTypeId: input.media.mediaTypeId,
+              caption: input.media.caption,
+              sortOrder: input.media.sortOrder,
+            }
+          : null,
+      afterJson:
+        input.mode === "attach"
+          ? {
+              projectId: input.media.projectId,
+              fileId: input.media.fileId,
+              mediaTypeId: input.media.mediaTypeId,
+              caption: input.media.caption,
+              sortOrder: input.media.sortOrder,
+            }
+          : null,
+      changeSummary:
+        input.mode === "attach"
+          ? `Project media attached: ${input.project.name}`
+          : `Project media removed: ${input.project.name}`,
+      sourceApp: "ADMIN_PORTAL",
+      metadata: {
+        eventType: actionType,
+        actorUserId: input.actorUserId,
+        actorRoleId: input.actorRoleId,
+        projectId: input.project.projectId,
+        projectSlug: input.project.slug,
+        projectMediaId: input.media.projectMediaId,
+        fileId: input.media.fileId,
+        mediaTypeId: input.media.mediaTypeId,
+        sortOrder: input.media.sortOrder,
       },
     }),
   )

@@ -10,7 +10,7 @@ export default async function AdminProjectNewPage() {
   const options = await getAdminProjectFormOptions()
 
   return (
-    <section className="mx-auto w-full max-w-6xl space-y-4">
+    <section className="internal-page">
       <Card>
         <CardHeader>
           <CardTitle>Create Project</CardTitle>

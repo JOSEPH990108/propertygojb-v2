@@ -1,14 +1,16 @@
 import "server-only"
 
-import { and, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm"
+import { and, desc, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm"
 
 import { ROUTES } from "@/config/routes"
 import { db } from "@/db"
 import { roles, user } from "@/db/schema/identity-auth"
 import {
   evaluateRoleChange,
+  resolveRoleChangePermissionPreview,
   type AssignInternalRole,
   type AssignRoleCode,
+  type InternalActorRole,
   type RoleChangeFailureCode,
 } from "@/lib/admin/users/role-policy"
 import { writeInternalRoleChangeAudit } from "@/lib/admin/users/audit"
@@ -24,6 +26,12 @@ export type AdminUserListItem = {
   email: string
   phoneMasked: string | null
   roleCode: AllowedRoleFilter | null
+  roleChangePermission: {
+    canChange: boolean
+    allowedTargetRoles: readonly AssignInternalRole[]
+    blockedReasonCode?: RoleChangeFailureCode
+    blockedReasonMessage?: string
+  }
   createdAt: string
   updatedAt: string
 }
@@ -137,6 +145,15 @@ function normalizeRoleCode(value: unknown): AssignRoleCode | null {
   }
 }
 
+function normalizeInternalActorRole(value: unknown): InternalActorRole | null {
+  const normalized = normalizeRoleCode(value)
+  if (normalized === "ADMIN" || normalized === "SUPER_ADMIN") {
+    return normalized
+  }
+
+  return null
+}
+
 function resolveActorUserId(value: unknown): string | null {
   if (!value || typeof value !== "object") {
     return null
@@ -165,9 +182,12 @@ class AuditWriteFailedError extends Error {
 }
 
 export async function listAdminUsers(params: ListAdminUsersParams = {}): Promise<ListAdminUsersResult> {
-  await requireRole(["ADMIN", "SUPER_ADMIN"], {
+  const authContext = await requireRole(["ADMIN", "SUPER_ADMIN"], {
     nextPath: ROUTES.admin.users,
   })
+
+  const actorUserId = resolveActorUserId(authContext.user)
+  const actorRole = normalizeInternalActorRole(authContext.roleCode)
 
   if (!db) {
     return {
@@ -237,6 +257,21 @@ export async function listAdminUsers(params: ListAdminUsersParams = {}): Promise
   return {
     users: rows.map((row) => {
       const roleCode = normalizeRoleFilter(row.roleCode ?? undefined)
+      const targetRole = normalizeRoleCode(row.roleCode)
+
+      const roleChangePermission = actorRole
+        ? resolveRoleChangePermissionPreview({
+            actorRole,
+            previousRole: targetRole,
+            actorUserId: actorUserId ?? undefined,
+            targetUserId: row.id,
+          })
+        : {
+            canChange: false,
+            assignableRoles: [] as const,
+            code: "FORBIDDEN" as const,
+            message: "You are not allowed to change roles.",
+          }
 
       return {
         id: row.id,
@@ -244,6 +279,12 @@ export async function listAdminUsers(params: ListAdminUsersParams = {}): Promise
         email: row.email,
         phoneMasked: buildPhoneMask(row.phoneNumber),
         roleCode: roleCode === "ALL" ? null : roleCode,
+        roleChangePermission: {
+          canChange: roleChangePermission.canChange,
+          allowedTargetRoles: roleChangePermission.assignableRoles,
+          blockedReasonCode: roleChangePermission.code,
+          blockedReasonMessage: roleChangePermission.message,
+        },
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
       }
@@ -313,6 +354,8 @@ export async function assignInternalUserRole(
         .select({
           id: user.id,
           roleCode: roles.code,
+          roleIsActive: roles.isActive,
+          roleDeletedAt: roles.deletedAt,
         })
         .from(user)
         .leftJoin(roles, eq(user.roleId, roles.id))
@@ -324,13 +367,23 @@ export async function assignInternalUserRole(
         return buildFailure("TARGET_NOT_FOUND", "Target user was not found.")
       }
 
-      if (actorUserId === targetRecord.id) {
-        return buildFailure("SELF_ROLE_CHANGE_BLOCKED", "You cannot modify your own role.")
+      const previousRole = normalizeRoleCode(targetRecord.roleCode)
+      if (!previousRole || !targetRecord.roleIsActive || targetRecord.roleDeletedAt) {
+        return buildFailure("ROLE_CHANGE_NOT_ALLOWED", "Current target role is not eligible for this action.")
       }
 
-      const previousRole = normalizeRoleCode(targetRecord.roleCode)
-      if (!previousRole) {
-        return buildFailure("ROLE_CHANGE_NOT_ALLOWED", "Current target role is not eligible for this action.")
+      const permission = resolveRoleChangePermissionPreview({
+        actorRole: actorRoleCode,
+        previousRole,
+        actorUserId,
+        targetUserId,
+      })
+
+      if (!permission.canChange) {
+        return buildFailure(
+          permission.code ?? "ROLE_CHANGE_NOT_ALLOWED",
+          permission.message ?? "This role change is not allowed.",
+        )
       }
 
       const policy = evaluateRoleChange({
@@ -348,7 +401,7 @@ export async function assignInternalUserRole(
           id: roles.id,
         })
         .from(roles)
-        .where(eq(roles.code, normalizedTargetRole))
+        .where(and(eq(roles.code, normalizedTargetRole), eq(roles.isActive, true), isNull(roles.deletedAt)))
         .limit(1)
 
       const resolvedTargetRole = targetRoleRecord[0]

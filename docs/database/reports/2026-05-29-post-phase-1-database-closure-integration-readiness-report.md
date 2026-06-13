@@ -1,5 +1,10 @@
 # Post-Phase 1 Database Closure + Integration Readiness Report
 
+Historical note (added 2026-06-12):
+- This report reflects implementation state as of 2026-05-29.
+- Runtime auth and internal access implementation progressed after this date.
+- Use docs/ai-orchestrator/project-state.md for the latest cross-module status snapshot.
+
 - Date: 2026-05-29
 - Scope: Phase 1A through Phase 1D database delivery closure, plus current integration readiness assessment.
 - Basis of Review:

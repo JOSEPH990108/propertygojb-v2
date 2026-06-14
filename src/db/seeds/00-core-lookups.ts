@@ -21,6 +21,7 @@ export async function seedCoreLookups(db: DB) {
       { code: "LANDED", name: "Landed" },
       { code: "HIGH_RISE", name: "High Rise" },
       { code: "COMMERCIAL", name: "Commercial" },
+      { code: "MIXED", name: "Mixed Development" },
     ])
     .onConflictDoNothing();
 
@@ -45,6 +46,42 @@ export async function seedCoreLookups(db: DB) {
       slug: "terrace-house",
       name: "Terrace House",
       categoryCode: "LANDED",
+    },
+    {
+      code: "FLAT",
+      slug: "flat",
+      name: "Flat / Apartment",
+      categoryCode: "HIGH_RISE",
+    },
+    {
+      code: "BUNGALOW",
+      slug: "bungalow",
+      name: "Bungalow",
+      categoryCode: "LANDED",
+    },
+    {
+      code: "SEMI_D",
+      slug: "semi-detached",
+      name: "Semi-D",
+      categoryCode: "LANDED",
+    },
+    {
+      code: "TOWNHOUSE",
+      slug: "townhouse",
+      name: "Townhouse",
+      categoryCode: "LANDED",
+    },
+    {
+      code: "SHOP_LOT",
+      slug: "shop-lot",
+      name: "Shop Lot",
+      categoryCode: "COMMERCIAL",
+    },
+    {
+      code: "RETAIL",
+      slug: "retail-lot",
+      name: "Retail Lot",
+      categoryCode: "COMMERCIAL",
     },
     {
       code: "CLUSTER",
@@ -84,6 +121,9 @@ export async function seedCoreLookups(db: DB) {
       { code: "NEW_LAUNCH", name: "New Launch" },
       { code: "UNDER_CONSTRUCTION", name: "Under Construction" },
       { code: "COMPLETED", name: "Completed" },
+      { code: "UPCOMING", name: "Upcoming" },
+      { code: "SUBSALE", name: "Subsale" },
+      { code: "FULLY_SOLD", name: "Fully Sold" },
     ])
     .onConflictDoNothing();
 
@@ -111,6 +151,7 @@ export async function seedCoreLookups(db: DB) {
     .values([
       { code: "FREEHOLD", name: "Freehold" },
       { code: "LEASEHOLD_99", name: "Leasehold 99" },
+      { code: "LEASEHOLD_60", name: "Leasehold 60" },
     ])
     .onConflictDoNothing();
 
@@ -127,6 +168,8 @@ export async function seedCoreLookups(db: DB) {
     .values([
       { code: "BUMIPUTERA", name: "Bumiputera" },
       { code: "NON_BUMIPUTERA", name: "Non-Bumiputera" },
+      { code: "INTERNATIONAL", name: "International" },
+      { code: "MIXED", name: "Mixed" },
     ])
     .onConflictDoNothing();
 
@@ -136,6 +179,8 @@ export async function seedCoreLookups(db: DB) {
       { code: "INTER", name: "Intermediate" },
       { code: "COR", name: "Corner" },
       { code: "END", name: "End" },
+      { code: "EU", name: "End Unit" },
+      { code: "EUL", name: "End Unit (Extra Land)" },
     ])
     .onConflictDoNothing();
 
@@ -143,7 +188,45 @@ export async function seedCoreLookups(db: DB) {
     .insert(schema.buyerTypes)
     .values([
       { code: "MALAYSIAN", name: "Malaysian" },
+      { code: "MALAYSIAN_CITIZEN", name: "Citizen" },
       { code: "FOREIGNER", name: "Foreigner" },
+      { code: "COMPANY_MALAYSIAN", name: "Company" },
+    ])
+    .onConflictDoNothing();
+
+  await db
+    .insert(schema.appointmentStatuses)
+    .values([
+      {
+        code: "PENDING",
+        name: "Pending",
+        description: "User requested appointment",
+      },
+      {
+        code: "CONFIRMED",
+        name: "Confirmed",
+        description: "Agent confirmed appointment",
+      },
+      {
+        code: "COMPLETED",
+        name: "Completed",
+        description: "Visit verified via QR scan",
+      },
+      {
+        code: "NO_SHOW",
+        name: "No Show",
+        description: "User failed to attend",
+      },
+      {
+        code: "CANCELLED",
+        name: "Cancelled",
+        description: "Cancelled by user",
+      },
+      {
+        code: "REJECTED",
+        name: "Rejected",
+        description: "Rejected by agent",
+      },
     ])
     .onConflictDoNothing();
 
@@ -169,7 +252,10 @@ export async function seedCoreLookups(db: DB) {
     .values([
       { slug: "swimming-pool", name: "Swimming Pool" },
       { slug: "gym", name: "Gym" },
+      { slug: "gymnasium", name: "Gymnasium" },
+      { slug: "24-7-security", name: "24/7 Security" },
       { slug: "playground", name: "Playground" },
+      { slug: "bbq-area", name: "BBQ Area" },
     ])
     .onConflictDoNothing();
 
@@ -178,6 +264,9 @@ export async function seedCoreLookups(db: DB) {
     .values([
       { slug: "new-launch", name: "New Launch" },
       { slug: "near-ciq", name: "Near CIQ" },
+      { slug: "near-rts", name: "Near RTS" },
+      { slug: "freehold", name: "Freehold" },
+      { slug: "sea-view", name: "Sea View" },
     ])
     .onConflictDoNothing();
 }

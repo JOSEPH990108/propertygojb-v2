@@ -1,11 +1,238 @@
-import { PagePlaceholder } from "@/components/layout/page-placeholder"
+import Link from "next/link"
 
-export default function AgentAppointmentsPage() {
+import {
+  ActionCard,
+  MetricCard,
+  ProButton,
+  ProSearchInput,
+  ProSelect,
+  ProStatusBadge,
+  ProTable,
+  ProTableEmptyState,
+  ProTableFilter,
+  ProTablePagination,
+  ProTableToolbar,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/pro-ui"
+import { ROUTES } from "@/config/routes"
+import {
+  listAgentAppointments,
+  type AgentAppointmentScope,
+} from "@/lib/agent/appointments/actions"
+import { setAgentAppointmentStatusFormAction } from "@/lib/agent/appointments/server-actions"
+
+type AgentAppointmentsPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}
+
+function getQueryValue(value: string | string[] | undefined): string {
+  if (typeof value === "string") {
+    return value
+  }
+
+  if (Array.isArray(value) && typeof value[0] === "string") {
+    return value[0]
+  }
+
+  return ""
+}
+
+function parsePage(value: string): number {
+  const parsed = Number.parseInt(value, 10)
+  if (Number.isNaN(parsed) || parsed < 1) {
+    return 1
+  }
+
+  return parsed
+}
+
+function normalizeScope(value: string): AgentAppointmentScope {
+  const normalized = value.trim().toUpperCase()
+
+  if (normalized === "SCHEDULED") {
+    return "SCHEDULED"
+  }
+
+  if (normalized === "PIPELINE") {
+    return "PIPELINE"
+  }
+
+  return "ALL"
+}
+
+function buildQuery(params: { search: string; scope: AgentAppointmentScope; page: number }): string {
+  const query = new URLSearchParams()
+
+  if (params.search) {
+    query.set("q", params.search)
+  }
+
+  if (params.scope !== "ALL") {
+    query.set("scope", params.scope)
+  }
+
+  query.set("page", String(params.page))
+
+  return query.toString()
+}
+
+function formatDateTime(value: string | null): string {
+  if (!value) {
+    return "-"
+  }
+
+  return new Intl.DateTimeFormat("en-MY", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value))
+}
+
+export default async function AgentAppointmentsPage({ searchParams }: AgentAppointmentsPageProps) {
+  const params = (await searchParams) ?? {}
+  const search = getQueryValue(params.q).trim()
+  const scope = normalizeScope(getQueryValue(params.scope))
+  const page = parsePage(getQueryValue(params.page))
+
+  const result = await listAgentAppointments({
+    search,
+    scope,
+    page,
+    pageSize: 20,
+    nextPath: ROUTES.agent.appointments,
+  })
+
+  const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize))
+  const previousPage = Math.max(1, result.page - 1)
+  const nextPage = Math.min(totalPages, result.page + 1)
+
+  const previousHref = `${ROUTES.agent.appointments}?${buildQuery({
+    search: result.search,
+    scope: result.scope,
+    page: previousPage,
+  })}`
+
+  const nextHref = `${ROUTES.agent.appointments}?${buildQuery({
+    search: result.search,
+    scope: result.scope,
+    page: nextPage,
+  })}`
+
   return (
-    <PagePlaceholder
-      eyebrow="Agent"
-      title="Appointments"
-      description="Appointments placeholder for the agent workspace."
-    />
+    <section className="internal-page">
+      <ActionCard
+        title="Appointments"
+        description="Your appointment queue derived from assigned qualified and nurturing leads."
+      >
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <MetricCard label="Scheduled" value={result.scheduledCount} hint="Appointment set leads" />
+            <MetricCard label="Pipeline" value={result.pipelineCount} hint="Qualified or nurturing" accent="blue" />
+            <MetricCard label="Visible" value={result.total} hint="Rows in current scope" accent="green" />
+          </div>
+
+          <form action={ROUTES.agent.appointments}>
+            <ProTableToolbar className="grid gap-3 md:grid-cols-[2fr_1fr_auto_auto]">
+              <ProSearchInput
+                name="q"
+                defaultValue={result.search}
+                placeholder="Search by lead name or phone"
+              />
+              <ProTableFilter as="div" className="min-h-11 p-0" showIcon={false}>
+                <ProSelect
+                  name="scope"
+                  defaultValue={result.scope}
+                  options={[
+                    { value: "ALL", label: "All scopes" },
+                    { value: "SCHEDULED", label: "Scheduled only" },
+                    { value: "PIPELINE", label: "Pipeline only" },
+                  ]}
+                />
+              </ProTableFilter>
+              <ProButton type="submit" variant="outline">
+                Apply
+              </ProButton>
+              <ProButton asChild variant="ghost">
+                <Link href={ROUTES.agent.appointments}>Reset</Link>
+              </ProButton>
+            </ProTableToolbar>
+          </form>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>
+              Showing {result.appointments.length} of {result.total} rows for the active scope.
+            </span>
+            <ProButton asChild size="sm" variant="outline">
+              <Link href={ROUTES.agent.leads}>Open Leads</Link>
+            </ProButton>
+          </div>
+
+          {result.appointments.length === 0 ? (
+            <ProTableEmptyState title="No appointments found" description="No appointments found for the current filters." />
+          ) : (
+            <ProTable>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Lead</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Activity</TableHead>
+                  <TableHead>Updated</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {result.appointments.map((item) => (
+                  <TableRow key={item.leadId}>
+                    <TableCell className="font-medium">{item.leadName}</TableCell>
+                    <TableCell>{item.phone}</TableCell>
+                    <TableCell>
+                      <ProStatusBadge label={item.status} status="pending" />
+                    </TableCell>
+                    <TableCell>{formatDateTime(item.lastActivityAt)}</TableCell>
+                    <TableCell>{formatDateTime(item.updatedAt)}</TableCell>
+                    <TableCell>
+                      {item.status === "APPOINTMENT_SET" ? (
+                        <form action={setAgentAppointmentStatusFormAction} className="inline-flex">
+                          <input type="hidden" name="leadId" value={item.leadId} />
+                          <input type="hidden" name="toStatus" value="NURTURING" />
+                          <input type="hidden" name="nextPath" value={ROUTES.agent.appointments} />
+                          <ProButton type="submit" size="sm" variant="outline">
+                            Move to Nurturing
+                          </ProButton>
+                        </form>
+                      ) : (
+                        <form action={setAgentAppointmentStatusFormAction} className="inline-flex">
+                          <input type="hidden" name="leadId" value={item.leadId} />
+                          <input type="hidden" name="toStatus" value="APPOINTMENT_SET" />
+                          <input type="hidden" name="nextPath" value={ROUTES.agent.appointments} />
+                          <ProButton type="submit" size="sm" variant="outline">
+                            Mark Scheduled
+                          </ProButton>
+                        </form>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </ProTable>
+          )}
+
+          <ProTablePagination
+            page={result.page}
+            totalPages={totalPages}
+            previousHref={previousHref}
+            nextHref={nextHref}
+          />
+
+          <div className="text-xs text-muted-foreground">
+            Dedicated appointment persistence is pending. This baseline module tracks scheduling flow through lead statuses.
+          </div>
+        </div>
+      </ActionCard>
+    </section>
   )
 }

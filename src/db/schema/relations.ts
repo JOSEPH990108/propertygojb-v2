@@ -60,6 +60,7 @@ import {
   featureFlags,
   systemSettings,
 } from "./settings-flags";
+import { otpChallenges } from "./otp";
 import {
   whatsappAgentQueueMembers,
   whatsappAgentQueues,
@@ -159,6 +160,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   rejectedAdminActionApprovals: many(adminActionApprovals, {
     relationName: "adminActionApprovalRejectedByUser",
   }),
+  otpChallenges: many(otpChallenges),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -167,6 +169,13 @@ export const sessionRelations = relations(session, ({ one }) => ({
 
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, { fields: [account.userId], references: [user.id] }),
+}));
+
+export const otpChallengeRelations = relations(otpChallenges, ({ one }) => ({
+  user: one(user, {
+    fields: [otpChallenges.userId],
+    references: [user.id],
+  }),
 }));
 
 export const permissionGroupRelations = relations(

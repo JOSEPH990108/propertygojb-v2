@@ -1,19 +1,24 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useMemo, useState } from "react"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import {
-  Table,
+  ActionCard,
+  ProButton,
+  ProEmptyState,
+  ProField,
+  ProInput,
+  ProLoadingState,
+  ProSelect,
+  ProStatusBadge,
+  ProValidationMessage,
+  ProTable,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import type {
   AdminProjectFormOption,
   AdminProjectMediaListItem,
@@ -42,12 +47,20 @@ function getFieldError(
   return fieldErrors?.[key]
 }
 
-function getScanStatusBadgeVariant(scanStatus: string | null): "secondary" | "outline" {
+function getScanStatusBadgeVariant(scanStatus: string | null): "success" | "error" | "pending" | "neutral" {
   if (scanStatus === "CLEAN") {
-    return "secondary"
+    return "success"
   }
 
-  return "outline"
+  if (scanStatus === "INFECTED") {
+    return "error"
+  }
+
+  if (scanStatus === "PENDING") {
+    return "pending"
+  }
+
+  return "neutral"
 }
 
 export function ProjectMediaManager({
@@ -66,137 +79,122 @@ export function ProjectMediaManager({
     INITIAL_PROJECT_MEDIA_ACTION_STATE,
   )
 
+  const [fileId, setFileId] = useState("")
+  const [mediaTypeId, setMediaTypeId] = useState("")
+
   const isBusy = isAttachPending || isRemovePending
+  const fileSelectOptions = useMemo(
+    () => fileOptions.map((file) => ({ value: file.id, label: file.name })),
+    [fileOptions],
+  )
+  const mediaTypeSelectOptions = useMemo(
+    () => mediaTypeOptions.map((option) => ({ value: option.id, label: option.name })),
+    [mediaTypeOptions],
+  )
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Project Media</CardTitle>
-        <CardDescription>
-          Link existing files to this project and manage relation records.
-        </CardDescription>
-      </CardHeader>
+    <ActionCard
+      title="Project Media"
+      description="Link existing files to this project and manage relation records."
+    >
+      <div className="space-y-4">
+        {isBusy ? <ProLoadingState label="Updating media relation..." /> : null}
 
-      <CardContent className="space-y-4">
         {attachState.message ? (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {attachState.message}
-          </div>
+          <ProValidationMessage tone="error" message={attachState.message} />
         ) : null}
 
         {removeState.message ? (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {removeState.message}
-          </div>
+          <ProValidationMessage tone="error" message={removeState.message} />
         ) : null}
 
-        <form action={attachFormAction} className="space-y-3 rounded-lg border p-3">
+        <form action={attachFormAction} className="space-y-3 rounded-2xl border border-border/70 bg-surface-glass p-4 shadow-[var(--shadow-xs)]">
           <input type="hidden" name="projectId" value={projectId} />
+          <input type="hidden" name="fileId" value={fileId} />
+          <input type="hidden" name="mediaTypeId" value={mediaTypeId} />
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-1">
-              <label htmlFor="fileId" className="text-sm font-medium">
-                File <span className="text-destructive">*</span>
-              </label>
-              <select
-                id="fileId"
-                name="fileId"
-                defaultValue=""
-                className="internal-form-select"
-                aria-invalid={getFieldError(attachState.fieldErrors, "fileId") ? true : undefined}
-              >
-                <option value="">Select file</option>
-                {fileOptions.map((file) => (
-                  <option key={file.id} value={file.id}>
-                    {file.name}
-                  </option>
-                ))}
-              </select>
+            <ProField
+              label="File"
+              required
+              errorMessage={getFieldError(attachState.fieldErrors, "fileId")}
+            >
+              <ProSelect
+                value={fileId || undefined}
+                onValueChange={setFileId}
+                placeholder="Select file"
+                options={fileSelectOptions}
+                disabled={isBusy || fileOptions.length === 0}
+                tone={getFieldError(attachState.fieldErrors, "fileId") ? "error" : "default"}
+              />
               {fileOptions.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
                   No active files available. Seed or upload files before linking media.
                 </p>
               ) : null}
-              {getFieldError(attachState.fieldErrors, "fileId") ? (
-                <p className="text-xs text-destructive">{getFieldError(attachState.fieldErrors, "fileId")}</p>
-              ) : null}
-            </div>
+            </ProField>
 
-            <div className="space-y-1">
-              <label htmlFor="mediaTypeId" className="text-sm font-medium">
-                Media Type
-              </label>
-              <select
-                id="mediaTypeId"
-                name="mediaTypeId"
-                defaultValue=""
-                className="internal-form-select"
-                aria-invalid={getFieldError(attachState.fieldErrors, "mediaTypeId") ? true : undefined}
-              >
-                <option value="">No media type</option>
-                {mediaTypeOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                  </option>
-                ))}
-              </select>
-              {getFieldError(attachState.fieldErrors, "mediaTypeId") ? (
-                <p className="text-xs text-destructive">{getFieldError(attachState.fieldErrors, "mediaTypeId")}</p>
-              ) : null}
-            </div>
+            <ProField
+              label="Media Type"
+              errorMessage={getFieldError(attachState.fieldErrors, "mediaTypeId")}
+            >
+              <ProSelect
+                value={mediaTypeId || undefined}
+                onValueChange={setMediaTypeId}
+                placeholder="No media type"
+                options={mediaTypeSelectOptions}
+                disabled={isBusy}
+                tone={getFieldError(attachState.fieldErrors, "mediaTypeId") ? "error" : "default"}
+              />
+            </ProField>
 
-            <div className="space-y-1">
-              <label htmlFor="caption" className="text-sm font-medium">
-                Caption
-              </label>
-              <Input
+            <ProField
+              label="Caption"
+              errorMessage={getFieldError(attachState.fieldErrors, "caption")}
+            >
+              <ProInput
                 id="caption"
                 name="caption"
                 defaultValue=""
                 placeholder="Optional caption"
-                aria-invalid={getFieldError(attachState.fieldErrors, "caption") ? true : undefined}
+                tone={getFieldError(attachState.fieldErrors, "caption") ? "error" : "default"}
               />
-              {getFieldError(attachState.fieldErrors, "caption") ? (
-                <p className="text-xs text-destructive">{getFieldError(attachState.fieldErrors, "caption")}</p>
-              ) : null}
-            </div>
+            </ProField>
 
-            <div className="space-y-1">
-              <label htmlFor="sortOrder" className="text-sm font-medium">
-                Sort Order
-              </label>
-              <Input
+            <ProField
+              label="Sort Order"
+              errorMessage={getFieldError(attachState.fieldErrors, "sortOrder")}
+            >
+              <ProInput
                 id="sortOrder"
                 name="sortOrder"
                 type="number"
                 min={0}
                 defaultValue=""
                 placeholder="Auto"
-                aria-invalid={getFieldError(attachState.fieldErrors, "sortOrder") ? true : undefined}
+                tone={getFieldError(attachState.fieldErrors, "sortOrder") ? "error" : "default"}
               />
-              {getFieldError(attachState.fieldErrors, "sortOrder") ? (
-                <p className="text-xs text-destructive">{getFieldError(attachState.fieldErrors, "sortOrder")}</p>
-              ) : null}
-            </div>
+            </ProField>
           </div>
 
           {getFieldError(attachState.fieldErrors, "form") ? (
-            <p className="text-xs text-destructive">{getFieldError(attachState.fieldErrors, "form")}</p>
+            <ProValidationMessage tone="error" message={getFieldError(attachState.fieldErrors, "form") ?? "Unable to link file."} />
           ) : null}
 
           <div className="flex items-center justify-end">
-            <Button type="submit" size="sm" disabled={isBusy || fileOptions.length === 0}>
+            <ProButton type="submit" size="sm" disabled={isBusy || fileOptions.length === 0}>
               {isAttachPending ? "Linking..." : "Link File"}
-            </Button>
+            </ProButton>
           </div>
         </form>
 
         {mediaItems.length === 0 ? (
-          <div className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-            No linked media yet for this project.
-          </div>
+          <ProEmptyState
+            title="No linked media"
+            description="No linked media exists for this project yet. Link a file to start building the media gallery."
+          />
         ) : (
-          <Table>
+          <ProTable>
             <TableHeader>
               <TableRow>
                 <TableHead>File</TableHead>
@@ -215,7 +213,7 @@ export function ProjectMediaManager({
                     <div className="max-w-[28rem] space-y-1">
                       <p className="truncate text-sm">{item.fileKey ?? item.fileId}</p>
                       {item.fileDeletedAt ? (
-                        <Badge variant="destructive">File deleted</Badge>
+                        <ProStatusBadge label="File deleted" status="rejected" />
                       ) : null}
                     </div>
                   </TableCell>
@@ -225,26 +223,29 @@ export function ProjectMediaManager({
                   </TableCell>
                   <TableCell>{item.sortOrder}</TableCell>
                   <TableCell>
-                    <Badge variant={getScanStatusBadgeVariant(item.fileScanStatus)}>
-                      {item.fileScanStatus ?? "UNKNOWN"}
-                    </Badge>
+                    <ProStatusBadge
+                      label={item.fileScanStatus ?? "UNKNOWN"}
+                      status={getScanStatusBadgeVariant(item.fileScanStatus)}
+                    />
                   </TableCell>
-                  <TableCell>{item.fileVisibilityScope ?? "-"}</TableCell>
+                  <TableCell>
+                    <ProStatusBadge label={item.fileVisibilityScope ?? "-"} status="neutral" mode="outline" />
+                  </TableCell>
                   <TableCell className="text-right">
                     <form action={removeFormAction} className="inline-flex">
                       <input type="hidden" name="projectId" value={projectId} />
                       <input type="hidden" name="projectMediaId" value={item.id} />
-                      <Button type="submit" size="sm" variant="destructive" disabled={isBusy}>
+                      <ProButton type="submit" size="sm" variant="danger" disabled={isBusy}>
                         {isRemovePending ? "Removing..." : "Remove"}
-                      </Button>
+                      </ProButton>
                     </form>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </ProTable>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </ActionCard>
   )
 }

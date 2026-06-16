@@ -2,17 +2,20 @@ import { asc, desc, isNull, sql } from "drizzle-orm"
 import Link from "next/link"
 
 import { SignOutButton } from "@/components/auth/sign-out-button"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Table,
+  ActionCard,
+  MetricCard,
+  ProButton,
+  ProEmptyState,
+  ProPanel,
+  ProStatusBadge,
+  ProTable,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import { db } from "@/db"
 import { featureFlags, systemSettings } from "@/db/schema/settings-flags"
@@ -90,54 +93,55 @@ export default async function AdminSettingsPage() {
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Settings</CardTitle>
-          <CardDescription>
-            Operational settings baseline with system-setting and feature-flag visibility.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Session controls</CardTitle>
-                <CardDescription>End current admin session and return to login.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
+      <ActionCard
+        title="Settings"
+        description="Operational settings baseline with system-setting and feature-flag visibility."
+      >
+        <div className="space-y-4">
+          <ProPanel className="grid gap-3 md:grid-cols-2">
+            <ProPanel className="space-y-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Session controls</h3>
+                <p className="text-sm text-muted-foreground">End current admin session and return to login.</p>
+              </div>
+              <div className="space-y-3">
                 <SignOutButton className="w-full sm:w-auto" />
                 <div className="text-xs text-muted-foreground">
                   Use sign-out before role handoff or privileged workstation transfer.
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </ProPanel>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Quick links</CardTitle>
-                <CardDescription>Operational routes frequently used with settings review.</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-wrap items-center gap-2">
-                <Button asChild size="sm" variant="outline">
+            <ProPanel className="space-y-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Quick links</h3>
+                <p className="text-sm text-muted-foreground">Operational routes frequently used with settings review.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <ProButton asChild size="sm" variant="outline">
                   <Link href={ROUTES.admin.users}>Users</Link>
-                </Button>
-                <Button asChild size="sm" variant="outline">
+                </ProButton>
+                <ProButton asChild size="sm" variant="outline">
                   <Link href={ROUTES.admin.agents}>Agents</Link>
-                </Button>
-                <Button asChild size="sm" variant="outline">
+                </ProButton>
+                <ProButton asChild size="sm" variant="outline">
                   <Link href={ROUTES.admin.reports}>Reports</Link>
-                </Button>
-              </CardContent>
-            </Card>
+                </ProButton>
+              </div>
+            </ProPanel>
+          </ProPanel>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <MetricCard label="System settings sampled" value={settingsRows.length} hint="Latest 40 rows" />
+            <MetricCard label="Feature flags sampled" value={flagRows.length} hint="Latest 40 rows" accent="blue" />
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Environment summary</CardTitle>
-              <CardDescription>Active settings and enabled flags by environment.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
+          <ProPanel className="space-y-3">
+            <div>
+              <h3 className="text-base font-semibold text-foreground">Environment summary</h3>
+              <p className="text-sm text-muted-foreground">Active settings and enabled flags by environment.</p>
+            </div>
+            <ProTable>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Environment</TableHead>
@@ -171,22 +175,18 @@ export default async function AdminSettingsPage() {
                     })
                   )}
                 </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+              </ProTable>
+            </ProPanel>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">System settings snapshot</CardTitle>
-              <CardDescription>Latest configured settings (up to 40 rows, secret values hidden).</CardDescription>
-            </CardHeader>
-            <CardContent>
+            <ProPanel className="space-y-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">System settings snapshot</h3>
+                <p className="text-sm text-muted-foreground">Latest configured settings (up to 40 rows, secret values hidden).</p>
+              </div>
               {settingsRows.length === 0 ? (
-                <div className="internal-empty-state p-4">
-                  No system settings found.
-                </div>
+                  <ProEmptyState title="No system settings" description="No system settings found." />
               ) : (
-                <Table>
+                  <ProTable>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Key</TableHead>
@@ -206,34 +206,31 @@ export default async function AdminSettingsPage() {
                         <TableCell>{row.valueType}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-1">
-                            <Badge variant={row.isActive ? "default" : "outline"}>
-                              {row.isActive ? "ACTIVE" : "INACTIVE"}
-                            </Badge>
-                            {row.isReadOnly ? <Badge variant="outline">READ-ONLY</Badge> : null}
-                            {row.isSecret ? <Badge variant="outline">SECRET-REF</Badge> : null}
+                            <ProStatusBadge
+                              label={row.isActive ? "ACTIVE" : "INACTIVE"}
+                              status={row.isActive ? "success" : "neutral"}
+                            />
+                            {row.isReadOnly ? <ProStatusBadge label="READ-ONLY" status="info" mode="outline" /> : null}
+                            {row.isSecret ? <ProStatusBadge label="SECRET-REF" status="warning" mode="outline" /> : null}
                           </div>
                         </TableCell>
                         <TableCell>{formatDateTime(row.updatedAt)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </ProTable>
               )}
-            </CardContent>
-          </Card>
+          </ProPanel>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Feature flags snapshot</CardTitle>
-              <CardDescription>Latest feature flags (up to 40 rows).</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {flagRows.length === 0 ? (
-                <div className="internal-empty-state p-4">
-                  No feature flags found.
-                </div>
+          <ProPanel className="space-y-3">
+            <div>
+              <h3 className="text-base font-semibold text-foreground">Feature flags snapshot</h3>
+              <p className="text-sm text-muted-foreground">Latest feature flags (up to 40 rows).</p>
+            </div>
+            {flagRows.length === 0 ? (
+                <ProEmptyState title="No feature flags" description="No feature flags found." />
               ) : (
-                <Table>
+                <ProTable>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Key</TableHead>
@@ -258,21 +255,21 @@ export default async function AdminSettingsPage() {
                           {row.rolloutPercentage !== null ? ` (${row.rolloutPercentage}%)` : ""}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={row.isEnabled ? "default" : "outline"}>
-                            {row.isEnabled ? "ENABLED" : "DISABLED"}
-                          </Badge>
+                          <ProStatusBadge
+                            label={row.isEnabled ? "ENABLED" : "DISABLED"}
+                            status={row.isEnabled ? "success" : "neutral"}
+                          />
                         </TableCell>
                         <TableCell>{row.sunsetAt ? formatDateTime(row.sunsetAt) : "-"}</TableCell>
                         <TableCell>{formatDateTime(row.updatedAt)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </ProTable>
               )}
-            </CardContent>
-          </Card>
-        </CardContent>
-      </Card>
+          </ProPanel>
+        </div>
+      </ActionCard>
     </section>
   )
 }

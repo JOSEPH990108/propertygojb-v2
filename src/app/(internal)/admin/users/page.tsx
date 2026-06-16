@@ -1,9 +1,7 @@
 import Link from "next/link"
 
 import { AdminUsersTable } from "@/components/admin/users/admin-users-table"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { ActionCard, ProButton, ProSearchInput, ProSelect, ProTableFilter, ProTablePagination, ProTableToolbar } from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import { listAdminUsers } from "@/lib/admin/users/actions"
 
@@ -51,37 +49,38 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>
-            Internal users list for ADMIN and SUPER_ADMIN with policy-gated role change controls.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form action={ROUTES.admin.users} className="grid gap-3 md:grid-cols-[2fr_1fr_auto_auto]">
-            <Input
-              name="q"
-              defaultValue={result.search}
-              placeholder="Search by name, email, or phone"
-            />
-            <select
-              name="role"
-              defaultValue={result.role}
-              className="internal-form-select"
-            >
-              <option value="ALL">All roles</option>
-              <option value="CUSTOMER">CUSTOMER</option>
-              <option value="AGENT">AGENT</option>
-              <option value="ADMIN">ADMIN</option>
-              <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-            </select>
-            <Button type="submit" variant="outline">
-              Apply
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href={ROUTES.admin.users}>Reset</Link>
-            </Button>
+      <ActionCard
+        title="User Management"
+        description="Internal users list for ADMIN and SUPER_ADMIN with policy-gated role change controls."
+      >
+        <div className="space-y-4">
+          <form action={ROUTES.admin.users}>
+            <ProTableToolbar className="grid gap-3 md:grid-cols-[2fr_1fr_auto_auto]">
+              <ProSearchInput
+                name="q"
+                defaultValue={result.search}
+                placeholder="Search by name, email, or phone"
+              />
+              <ProTableFilter as="div" className="min-h-11 p-0" showIcon={false}>
+                <ProSelect
+                  name="role"
+                  defaultValue={result.role}
+                  options={[
+                    { value: "ALL", label: "All roles" },
+                    { value: "CUSTOMER", label: "CUSTOMER" },
+                    { value: "AGENT", label: "AGENT" },
+                    { value: "ADMIN", label: "ADMIN" },
+                    { value: "SUPER_ADMIN", label: "SUPER_ADMIN" },
+                  ]}
+                />
+              </ProTableFilter>
+              <ProButton type="submit" variant="outline">
+                Apply
+              </ProButton>
+              <ProButton asChild variant="ghost">
+                <Link href={ROUTES.admin.users}>Reset</Link>
+              </ProButton>
+            </ProTableToolbar>
           </form>
 
           <div className="text-xs text-muted-foreground">
@@ -90,29 +89,14 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
 
           <AdminUsersTable users={result.users} />
 
-          <div className="internal-divider flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Page {result.page} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline" disabled={result.page <= 1}>
-                <Link
-                  href={`${ROUTES.admin.users}?q=${encodeURIComponent(result.search)}&role=${result.role}&page=${previousPage}`}
-                >
-                  Previous
-                </Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" disabled={result.page >= totalPages}>
-                <Link
-                  href={`${ROUTES.admin.users}?q=${encodeURIComponent(result.search)}&role=${result.role}&page=${nextPage}`}
-                >
-                  Next
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <ProTablePagination
+            page={result.page}
+            totalPages={totalPages}
+            previousHref={`${ROUTES.admin.users}?q=${encodeURIComponent(result.search)}&role=${result.role}&page=${previousPage}`}
+            nextHref={`${ROUTES.admin.users}?q=${encodeURIComponent(result.search)}&role=${result.role}&page=${nextPage}`}
+          />
+        </div>
+      </ActionCard>
     </section>
   )
 }

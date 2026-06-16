@@ -1,9 +1,15 @@
 import Link from "next/link"
 
 import { AdminPropertiesTable } from "@/components/admin/properties/admin-properties-table"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import {
+  ActionCard,
+  ProButton,
+  ProSearchInput,
+  ProSelect,
+  ProTableFilter,
+  ProTablePagination,
+  ProTableToolbar,
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import { listAdminProperties } from "@/lib/admin/properties/actions"
 
@@ -92,53 +98,42 @@ export default async function AdminPropertiesPage({ searchParams }: PropertiesPa
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Properties</CardTitle>
-          <CardDescription>
-            Inventory visibility for projects, booking status, and pricing baselines.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form
-            action={ROUTES.admin.properties}
-            className="grid gap-3 md:grid-cols-[2fr_1fr_1fr_auto_auto]"
-          >
-            <Input
-              name="q"
-              defaultValue={result.search}
-              placeholder="Search by unit no, project, status, lot type, layout, phase, or tower"
-            />
-            <select
-              name="projectId"
-              defaultValue={result.projectId}
-              className="internal-form-select"
-            >
-              <option value="ALL">All projects</option>
-              {result.projectOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-            <select
-              name="bookingStatusId"
-              defaultValue={result.bookingStatusId}
-              className="internal-form-select"
-            >
-              <option value="ALL">All booking statuses</option>
-              {result.bookingStatusOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" variant="outline">
-              Apply
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href={ROUTES.admin.properties}>Reset</Link>
-            </Button>
+      <ActionCard title="Properties" description="Inventory visibility for projects, booking status, and pricing baselines.">
+        <div className="space-y-4">
+          <form action={ROUTES.admin.properties}>
+            <ProTableToolbar className="grid gap-3 md:grid-cols-[2fr_1fr_1fr_auto_auto]">
+              <ProSearchInput
+                name="q"
+                defaultValue={result.search}
+                placeholder="Search by unit no, project, status, lot type, layout, phase, or tower"
+              />
+              <ProTableFilter as="div" className="min-h-11 p-0" showIcon={false}>
+                <ProSelect
+                  name="projectId"
+                  defaultValue={result.projectId}
+                  options={[
+                    { value: "ALL", label: "All projects" },
+                    ...result.projectOptions.map((option) => ({ value: option.id, label: option.name })),
+                  ]}
+                />
+              </ProTableFilter>
+              <ProTableFilter as="div" className="min-h-11 p-0" showIcon={false}>
+                <ProSelect
+                  name="bookingStatusId"
+                  defaultValue={result.bookingStatusId}
+                  options={[
+                    { value: "ALL", label: "All booking statuses" },
+                    ...result.bookingStatusOptions.map((option) => ({ value: option.id, label: option.name })),
+                  ]}
+                />
+              </ProTableFilter>
+              <ProButton type="submit" variant="outline">
+                Apply
+              </ProButton>
+              <ProButton asChild variant="ghost">
+                <Link href={ROUTES.admin.properties}>Reset</Link>
+              </ProButton>
+            </ProTableToolbar>
           </form>
 
           <div className="text-xs text-muted-foreground">
@@ -147,21 +142,14 @@ export default async function AdminPropertiesPage({ searchParams }: PropertiesPa
 
           <AdminPropertiesTable properties={result.properties} />
 
-          <div className="internal-divider flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Page {result.page} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline" disabled={result.page <= 1}>
-                <Link href={previousHref}>Previous</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" disabled={result.page >= totalPages}>
-                <Link href={nextHref}>Next</Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <ProTablePagination
+            page={result.page}
+            totalPages={totalPages}
+            previousHref={previousHref}
+            nextHref={nextHref}
+          />
+        </div>
+      </ActionCard>
     </section>
   )
 }

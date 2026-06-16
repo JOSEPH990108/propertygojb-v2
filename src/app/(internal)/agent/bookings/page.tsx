@@ -1,15 +1,17 @@
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import {
-  Table,
+  ActionCard,
+  ProButton,
+  ProInput,
+  ProSelect,
+  ProStatusBadge,
+  ProTable,
+  ProTableEmptyState,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import { listWorkspaceBookings } from "@/lib/internal/bookings/actions"
 import { updateWorkspaceBookingStatusAction } from "@/lib/internal/bookings/server-actions"
@@ -34,20 +36,12 @@ export default async function AgentBookingsPage() {
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Bookings</CardTitle>
-          <CardDescription>
-            Your assigned bookings with current status visibility.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <ActionCard title="Bookings" description="Your assigned bookings with current status visibility.">
+        <div>
           {bookingRows.length === 0 ? (
-            <div className="internal-empty-state">
-              No assigned bookings found.
-            </div>
+            <ProTableEmptyState title="No assigned bookings" description="No assigned bookings found." />
           ) : (
-            <Table>
+            <ProTable>
               <TableHeader>
                 <TableRow>
                   <TableHead>Booking</TableHead>
@@ -73,7 +67,7 @@ export default async function AgentBookingsPage() {
                       <TableRow key={booking.id}>
                         <TableCell className="font-medium">{booking.bookingCode}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{booking.status}</Badge>
+                          <ProStatusBadge label={booking.status} status="pending" />
                         </TableCell>
                         <TableCell>{booking.projectName}</TableCell>
                         <TableCell>{booking.leadName}</TableCell>
@@ -85,27 +79,22 @@ export default async function AgentBookingsPage() {
                               <input type="hidden" name="bookingId" value={booking.id} />
                               <input type="hidden" name="nextPath" value={ROUTES.agent.bookings} />
 
-                              <select
+                              <ProSelect
                                 name="toStatus"
                                 defaultValue={candidateStatuses[0]}
-                                className="internal-form-select text-xs"
-                              >
-                                {candidateStatuses.map((status) => (
-                                  <option key={status} value={status}>
-                                    {status}
-                                  </option>
-                                ))}
-                              </select>
+                                options={candidateStatuses.map((status) => ({ value: status, label: status }))}
+                                className="text-xs"
+                              />
 
-                              <Input
+                              <ProInput
                                 name="reasonNote"
                                 placeholder="Reason note (required for rejected/cancelled)"
                                 className="h-8 text-xs"
                               />
 
-                              <Button type="submit" size="sm" variant="outline">
+                              <ProButton type="submit" size="sm" variant="outline">
                                 Update Status
-                              </Button>
+                              </ProButton>
                             </form>
                           ) : (
                             <span className="text-xs text-muted-foreground">No action</span>
@@ -116,10 +105,10 @@ export default async function AgentBookingsPage() {
                   })()
                 ))}
               </TableBody>
-            </Table>
+            </ProTable>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </ActionCard>
     </section>
   )
 }

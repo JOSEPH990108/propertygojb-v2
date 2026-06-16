@@ -1,13 +1,14 @@
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
-  Table,
+  ProButton,
+  ProStatusBadge,
+  ProTable,
+  ProTableEmptyState,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { setAdminAgentActiveStateFormAction } from "@/lib/admin/agents/server-actions"
 import type { AdminAgentListItem } from "@/lib/admin/agents/actions"
 
@@ -34,15 +35,11 @@ function renderAgency(agencyName: string | null, renNumber: string | null): stri
 
 export function AdminAgentsTable({ agents }: AdminAgentsTableProps) {
   if (agents.length === 0) {
-    return (
-      <div className="internal-empty-state">
-        No agents found for the current filters.
-      </div>
-    )
+    return <ProTableEmptyState title="No agents found" description="Try adjusting filters or search terms." />
   }
 
   return (
-    <Table>
+    <ProTable>
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
@@ -64,23 +61,21 @@ export function AdminAgentsTable({ agents }: AdminAgentsTableProps) {
             <TableCell>{renderAgency(agent.agencyName, agent.renNumber)}</TableCell>
             <TableCell>{agent.nationality ?? "-"}</TableCell>
             <TableCell>
-              <Badge variant={agent.isActive ? "default" : "outline"}>
-                {agent.isActive ? "ACTIVE" : "INACTIVE"}
-              </Badge>
+              <ProStatusBadge label={agent.isActive ? "ACTIVE" : "INACTIVE"} status={agent.isActive ? "success" : "neutral"} />
             </TableCell>
             <TableCell>{formatDateTime(agent.updatedAt)}</TableCell>
             <TableCell>
               <form action={setAdminAgentActiveStateFormAction} className="inline-flex">
                 <input type="hidden" name="agentUserId" value={agent.id} />
                 <input type="hidden" name="isActive" value={agent.isActive ? "false" : "true"} />
-                <Button size="sm" type="submit" variant="outline">
+                <ProButton size="sm" type="submit" variant="outline">
                   {agent.isActive ? "Deactivate" : "Activate"}
-                </Button>
+                </ProButton>
               </form>
             </TableCell>
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </ProTable>
   )
 }

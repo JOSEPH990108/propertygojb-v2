@@ -1,14 +1,15 @@
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Table,
+  ActionCard,
+  ProButton,
+  ProStatusBadge,
+  ProTable,
+  ProTableEmptyState,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import { listWorkspaceBookings } from "@/lib/internal/bookings/actions"
 import { updateWorkspaceBookingStatusAction } from "@/lib/internal/bookings/server-actions"
@@ -32,20 +33,15 @@ export default async function AdminBookingsPage() {
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Bookings</CardTitle>
-          <CardDescription>
-            Read-only booking operations baseline with status and assignment visibility.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <ActionCard
+        title="Bookings"
+        description="Read-only booking operations baseline with status and assignment visibility."
+      >
+        <div>
           {bookingRows.length === 0 ? (
-            <div className="internal-empty-state">
-              No bookings available for current filters.
-            </div>
+            <ProTableEmptyState title="No bookings available" description="No bookings available for current filters." />
           ) : (
-            <Table>
+            <ProTable>
               <TableHeader>
                 <TableRow>
                   <TableHead>Booking</TableHead>
@@ -70,7 +66,7 @@ export default async function AdminBookingsPage() {
                       <TableRow key={booking.id}>
                         <TableCell className="font-medium">{booking.bookingCode}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{booking.status}</Badge>
+                            <ProStatusBadge label={booking.status} status="pending" />
                         </TableCell>
                         <TableCell>{booking.projectName}</TableCell>
                         <TableCell>{booking.leadName}</TableCell>
@@ -83,9 +79,9 @@ export default async function AdminBookingsPage() {
                               <input type="hidden" name="bookingId" value={booking.id} />
                               <input type="hidden" name="toStatus" value={nextStatus} />
                               <input type="hidden" name="nextPath" value={ROUTES.admin.bookings} />
-                              <Button type="submit" size="sm" variant="outline">
+                              <ProButton type="submit" size="sm" variant="outline">
                                 Move to {nextStatus}
-                              </Button>
+                              </ProButton>
                             </form>
                           ) : (
                             <span className="text-xs text-muted-foreground">Final</span>
@@ -96,10 +92,10 @@ export default async function AdminBookingsPage() {
                   })()
                 ))}
               </TableBody>
-            </Table>
+            </ProTable>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </ActionCard>
     </section>
   )
 }

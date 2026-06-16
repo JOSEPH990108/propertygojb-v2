@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge"
+import { ProStatusBadge } from "@/components/pro-ui"
 
 type ProjectStatusBadgeProps = {
   statusName: string | null
@@ -6,8 +6,8 @@ type ProjectStatusBadgeProps = {
 
 export function ProjectStatusBadge({ statusName }: ProjectStatusBadgeProps) {
   if (!statusName) {
-    return <Badge variant="outline">Not set</Badge>
+    return <ProStatusBadge label="Not set" status="neutral" mode="outline" />
   }
 
-  return <Badge variant="secondary">{statusName}</Badge>
+  return <ProStatusBadge label={statusName} status="pending" />
 }

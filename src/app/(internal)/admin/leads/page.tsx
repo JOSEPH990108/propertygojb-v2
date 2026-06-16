@@ -1,14 +1,15 @@
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Table,
+  ActionCard,
+  ProButton,
+  ProStatusBadge,
+  ProTable,
+  ProTableEmptyState,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import {
   LEAD_STATUS_VALUES,
@@ -44,20 +45,15 @@ export default async function AdminLeadsPage() {
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Leads</CardTitle>
-          <CardDescription>
-            Operational lead queue with source/assignment visibility and workflow-safe status controls.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <ActionCard
+        title="Leads"
+        description="Operational lead queue with source/assignment visibility and workflow-safe status controls."
+      >
+        <div>
           {leadRows.length === 0 ? (
-            <div className="internal-empty-state">
-              No leads available for current scope.
-            </div>
+            <ProTableEmptyState title="No leads available" description="No leads available for current scope." />
           ) : (
-            <Table>
+            <ProTable>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
@@ -84,7 +80,7 @@ export default async function AdminLeadsPage() {
                       <TableCell className="font-medium">{lead.fullName}</TableCell>
                       <TableCell>{lead.phone}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{lead.status}</Badge>
+                        <ProStatusBadge label={lead.status} status="pending" />
                       </TableCell>
                       <TableCell>{lead.sourceName ?? "-"}</TableCell>
                       <TableCell>{lead.assigneeName ?? "Unassigned"}</TableCell>
@@ -96,9 +92,9 @@ export default async function AdminLeadsPage() {
                             <input type="hidden" name="leadId" value={lead.id} />
                             <input type="hidden" name="toStatus" value={nextStatus} />
                             <input type="hidden" name="nextPath" value={ROUTES.admin.leads} />
-                            <Button type="submit" size="sm" variant="outline">
+                            <ProButton type="submit" size="sm" variant="outline">
                               Move to {nextStatus}
-                            </Button>
+                            </ProButton>
                           </form>
                         ) : (
                           <span className="text-xs text-muted-foreground">Final</span>
@@ -108,27 +104,22 @@ export default async function AdminLeadsPage() {
                   )
                 })}
               </TableBody>
-            </Table>
+            </ProTable>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </ActionCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>WhatsApp Routing Snapshot</CardTitle>
-          <CardDescription>
-            Current queue setup and open conversation ownership.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 lg:grid-cols-2">
+      <ActionCard
+        title="WhatsApp Routing Snapshot"
+        description="Current queue setup and open conversation ownership."
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2">
             <h3 className="text-sm font-semibold">Queues</h3>
             {whatsapp.queues.length === 0 ? (
-              <div className="internal-empty-state p-4">
-                No queues found.
-              </div>
+              <ProTableEmptyState title="No queues found" description="Queue data is currently unavailable." />
             ) : (
-              <Table>
+              <ProTable>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Queue</TableHead>
@@ -149,25 +140,21 @@ export default async function AdminLeadsPage() {
                       <TableCell>{queue.assignmentStrategy}</TableCell>
                       <TableCell>{queue.memberCount}</TableCell>
                       <TableCell>
-                        <Badge variant={queue.isActive ? "secondary" : "outline"}>
-                          {queue.isActive ? "ACTIVE" : "INACTIVE"}
-                        </Badge>
+                        <ProStatusBadge label={queue.isActive ? "ACTIVE" : "INACTIVE"} status={queue.isActive ? "success" : "neutral"} />
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </ProTable>
             )}
           </div>
 
           <div className="space-y-2">
             <h3 className="text-sm font-semibold">Open Conversations</h3>
             {whatsapp.openConversations.length === 0 ? (
-              <div className="internal-empty-state p-4">
-                No open conversations found.
-              </div>
+              <ProTableEmptyState title="No open conversations" description="All queues are currently cleared." />
             ) : (
-              <Table>
+              <ProTable>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Customer</TableHead>
@@ -195,11 +182,11 @@ export default async function AdminLeadsPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </ProTable>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ActionCard>
     </section>
   )
 }

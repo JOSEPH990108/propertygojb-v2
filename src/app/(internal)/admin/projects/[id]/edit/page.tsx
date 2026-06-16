@@ -2,8 +2,7 @@ import Link from "next/link"
 
 import { ProjectForm } from "@/components/admin/projects/project-form"
 import { ProjectMediaManager } from "@/components/admin/projects/project-media-manager"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ActionCard, ProButton, ProPanel, ProStatusBadge } from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import {
   getAdminProjectById,
@@ -25,22 +24,20 @@ export default async function AdminProjectEditPage({ params }: AdminProjectEditP
   if (!projectResult.ok) {
     return (
       <section className="internal-page max-w-4xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>Edit Project</CardTitle>
-            <CardDescription>
-              The requested project record is unavailable.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <ActionCard
+          title="Edit Project"
+          description="The requested project record is unavailable."
+        >
+          <div className="space-y-3">
+            <ProStatusBadge label="Unavailable" status="warning" />
             <p className="text-sm text-muted-foreground">
               {projectResult.message}
             </p>
-            <Button asChild variant="outline" size="sm">
+            <ProButton asChild variant="outline" size="sm">
               <Link href={ROUTES.admin.projects}>Back to Projects</Link>
-            </Button>
-          </CardContent>
-        </Card>
+            </ProButton>
+          </div>
+        </ActionCard>
       </section>
     )
   }
@@ -50,19 +47,17 @@ export default async function AdminProjectEditPage({ params }: AdminProjectEditP
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Edit Project</CardTitle>
-          <CardDescription>
-            Update project fields while preserving validation and lookup safety.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="outline" size="sm">
+      <ActionCard
+        title="Edit Project"
+        description="Update project fields while preserving validation and lookup safety."
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <ProStatusBadge label={projectResult.project.isPublished ? "Published" : "Draft"} status={projectResult.project.isPublished ? "published" : "draft"} />
+          <ProButton asChild variant="outline" size="sm">
             <Link href={ROUTES.admin.projects}>Back to Projects</Link>
-          </Button>
-        </CardContent>
-      </Card>
+          </ProButton>
+        </div>
+      </ActionCard>
 
       <ProjectForm mode="edit" options={options} project={projectResult.project} />
 
@@ -74,17 +69,16 @@ export default async function AdminProjectEditPage({ params }: AdminProjectEditP
           mediaTypeOptions={options.mediaTypes}
         />
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Project Media</CardTitle>
-            <CardDescription>
-              Media relation manager is temporarily unavailable for this project.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <ProPanel className="space-y-2">
+          <h3 className="text-lg font-semibold text-foreground">Project Media</h3>
+          <p className="text-sm text-muted-foreground">
+            Media relation manager is temporarily unavailable for this project.
+          </p>
+          <ProStatusBadge label="Unavailable" status="warning" />
+          <div>
             <p className="text-sm text-muted-foreground">{mediaResult.message}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </ProPanel>
       )}
     </section>
   )

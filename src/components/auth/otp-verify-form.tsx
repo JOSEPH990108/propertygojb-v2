@@ -65,8 +65,8 @@ export function OtpVerifyForm({ initialPhoneNumber, initialRequestId }: OtpVerif
   }
 
   return (
-    <form className="space-y-3" onSubmit={handleSubmit}>
-      <div className="space-y-1">
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <div className="space-y-1.5">
         <label className="text-sm font-medium" htmlFor="verify-phone-number">
           Mobile number
         </label>
@@ -79,7 +79,7 @@ export function OtpVerifyForm({ initialPhoneNumber, initialRequestId }: OtpVerif
         />
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         <label className="text-sm font-medium" htmlFor="verify-otp-code">
           6-digit code
         </label>
@@ -95,6 +95,7 @@ export function OtpVerifyForm({ initialPhoneNumber, initialRequestId }: OtpVerif
             setCode(digits.slice(0, 6))
           }}
           placeholder="123456"
+          className="tracking-[0.22em]"
           disabled={isLoading}
           aria-invalid={errorMessage ? true : undefined}
         />
@@ -106,7 +107,7 @@ export function OtpVerifyForm({ initialPhoneNumber, initialRequestId }: OtpVerif
       </Button>
 
       {errorMessage ? (
-        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p className="rounded-xl border border-destructive/35 bg-destructive-soft px-3 py-2 text-sm text-destructive">
           {errorMessage}
         </p>
       ) : null}

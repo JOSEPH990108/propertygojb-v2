@@ -3,10 +3,15 @@
 import Link from "next/link"
 import { useActionState, useMemo } from "react"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import {
+  ActionCard,
+  ProButton,
+  ProField,
+  ProInput,
+  ProSelect,
+  ProTextarea,
+  ProValidationMessage,
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import type { AdminProjectEditable, AdminProjectFormOptions } from "@/lib/admin/projects/actions"
 import {
@@ -54,22 +59,22 @@ function InputField({
   fieldError?: string
 }) {
   return (
-    <div className="space-y-1">
-      <label htmlFor={name} className="text-sm font-medium">
-        {label}
-        {required ? <span className="text-destructive"> *</span> : null}
-      </label>
-      <Input
+    <ProField
+      label={label}
+      required={required}
+      helperText={helper}
+      errorMessage={fieldError}
+      successMessage={!fieldError && defaultValue ? "Looks good" : undefined}
+    >
+      <ProInput
         id={name}
         name={name}
         type={type}
         defaultValue={defaultValue ?? ""}
         placeholder={placeholder}
-        aria-invalid={fieldError ? true : undefined}
+        tone={fieldError ? "error" : defaultValue ? "success" : "default"}
       />
-      {helper ? <p className="text-xs text-muted-foreground">{helper}</p> : null}
-      {fieldError ? <p className="text-xs text-destructive">{fieldError}</p> : null}
-    </div>
+    </ProField>
   )
 }
 
@@ -91,27 +96,15 @@ function SelectField({
   emptyLabel: string
 }) {
   return (
-    <div className="space-y-1">
-      <label htmlFor={name} className="text-sm font-medium">
-        {label}
-        {required ? <span className="text-destructive"> *</span> : null}
-      </label>
-      <select
-        id={name}
+    <ProField label={label} required={required} errorMessage={fieldError}>
+      <ProSelect
         name={name}
         defaultValue={defaultValue ?? ""}
-        className="internal-form-select"
-        aria-invalid={fieldError ? true : undefined}
-      >
-        <option value="">{emptyLabel}</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
-          </option>
-        ))}
-      </select>
-      {fieldError ? <p className="text-xs text-destructive">{fieldError}</p> : null}
-    </div>
+        emptyOptionLabel={emptyLabel}
+        options={options.map((option) => ({ value: option.id, label: option.name }))}
+        tone={fieldError ? "error" : defaultValue ? "success" : "default"}
+      />
+    </ProField>
   )
 }
 
@@ -138,19 +131,13 @@ export function ProjectForm({ mode, options, project }: ProjectFormProps) {
   const fieldErrors = state.fieldErrors
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <ActionCard title={title} description={description}>
+      <div className="space-y-4">
         <form action={formAction} className="space-y-4">
           {mode === "edit" ? <input type="hidden" name="projectId" value={project?.id ?? ""} /> : null}
 
           {state.message ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {state.message}
-            </div>
+            <ProValidationMessage tone="error" message={state.message} />
           ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -190,21 +177,18 @@ export function ProjectForm({ mode, options, project }: ProjectFormProps) {
             />
           </div>
 
-          <div className="space-y-1">
-            <label htmlFor="description" className="text-sm font-medium">
-              Description
-            </label>
-            <Textarea
+          <ProField
+            label="Description"
+            errorMessage={getFieldError(fieldErrors, "description")}
+          >
+            <ProTextarea
               id="description"
               name="description"
               defaultValue={project?.description ?? ""}
               placeholder="Internal project description"
-              aria-invalid={getFieldError(fieldErrors, "description") ? true : undefined}
+              tone={getFieldError(fieldErrors, "description") ? "error" : "default"}
             />
-            {getFieldError(fieldErrors, "description") ? (
-              <p className="text-xs text-destructive">{getFieldError(fieldErrors, "description")}</p>
-            ) : null}
-          </div>
+          </ProField>
 
           <div className="grid gap-4 md:grid-cols-2">
             <SelectField
@@ -266,56 +250,43 @@ export function ProjectForm({ mode, options, project }: ProjectFormProps) {
               emptyLabel="No region"
               fieldError={getFieldError(fieldErrors, "regionId")}
             />
-            <div className="space-y-1">
-              <label htmlFor="areaId" className="text-sm font-medium">
-                Area
-              </label>
-              <select
-                id="areaId"
+            <ProField label="Area" errorMessage={getFieldError(fieldErrors, "areaId")}>
+              <ProSelect
                 name="areaId"
                 defaultValue={project?.areaId ?? ""}
-                className="internal-form-select"
-                aria-invalid={getFieldError(fieldErrors, "areaId") ? true : undefined}
-              >
-                <option value="">No area</option>
-                {options.areas.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.name}
-                    {regionNameById.get(area.regionId) ? ` (${regionNameById.get(area.regionId)})` : ""}
-                  </option>
-                ))}
-              </select>
-              {getFieldError(fieldErrors, "areaId") ? (
-                <p className="text-xs text-destructive">{getFieldError(fieldErrors, "areaId")}</p>
-              ) : null}
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="featuredFileId" className="text-sm font-medium">
-                Featured File
-              </label>
-              <select
-                id="featuredFileId"
+                emptyOptionLabel="No area"
+                options={options.areas.map((area) => ({
+                  value: area.id,
+                  label: regionNameById.get(area.regionId)
+                    ? `${area.name} (${regionNameById.get(area.regionId)})`
+                    : area.name,
+                }))}
+                tone={getFieldError(fieldErrors, "areaId") ? "error" : project?.areaId ? "success" : "default"}
+              />
+            </ProField>
+            <ProField
+              label="Featured File"
+              helperText={
+                options.featuredFiles.length === 0
+                  ? "No files available yet. Keep this empty until file records exist."
+                  : undefined
+              }
+              errorMessage={getFieldError(fieldErrors, "featuredFileId")}
+            >
+              <ProSelect
                 name="featuredFileId"
                 defaultValue={project?.featuredFileId ?? ""}
-                className="internal-form-select"
-                aria-invalid={getFieldError(fieldErrors, "featuredFileId") ? true : undefined}
-              >
-                <option value="">No featured file</option>
-                {options.featuredFiles.map((file) => (
-                  <option key={file.id} value={file.id}>
-                    {file.name}
-                  </option>
-                ))}
-              </select>
-              {options.featuredFiles.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  No files available yet. Keep this empty until file records exist.
-                </p>
-              ) : null}
-              {getFieldError(fieldErrors, "featuredFileId") ? (
-                <p className="text-xs text-destructive">{getFieldError(fieldErrors, "featuredFileId")}</p>
-              ) : null}
-            </div>
+                emptyOptionLabel="No featured file"
+                options={options.featuredFiles.map((file) => ({ value: file.id, label: file.name }))}
+                tone={
+                  getFieldError(fieldErrors, "featuredFileId")
+                    ? "error"
+                    : project?.featuredFileId
+                      ? "success"
+                      : "default"
+                }
+              />
+            </ProField>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -365,7 +336,7 @@ export function ProjectForm({ mode, options, project }: ProjectFormProps) {
             />
           </div>
 
-          <div className="flex items-center gap-2 rounded-lg border px-3 py-2">
+          <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-surface-glass px-3 py-2 shadow-[var(--shadow-xs)]">
             <input type="hidden" name="isPublished" value="false" />
             <input
               id="isPublished"
@@ -385,15 +356,15 @@ export function ProjectForm({ mode, options, project }: ProjectFormProps) {
           ) : null}
 
           <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-            <Button type="submit" disabled={isPending}>
+            <ProButton type="submit" disabled={isPending} loading={isPending}>
               {isPending ? "Saving..." : mode === "create" ? "Create Project" : "Save Changes"}
-            </Button>
-            <Button asChild type="button" variant="outline" disabled={isPending}>
+            </ProButton>
+            <ProButton asChild type="button" variant="outline">
               <Link href={ROUTES.admin.projects}>Cancel</Link>
-            </Button>
+            </ProButton>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </ActionCard>
   )
 }

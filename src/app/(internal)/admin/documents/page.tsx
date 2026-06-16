@@ -1,14 +1,15 @@
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Table,
+  ActionCard,
+  ProButton,
+  ProStatusBadge,
+  ProTable,
+  ProTableEmptyState,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import { listWorkspaceDocumentRequests } from "@/lib/internal/documents/actions"
 import { updateWorkspaceDocumentRequestStatusAction } from "@/lib/internal/documents/server-actions"
@@ -36,20 +37,12 @@ export default async function AdminDocumentsPage() {
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Documents</CardTitle>
-          <CardDescription>
-            Booking document request baseline with status visibility.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <ActionCard title="Documents" description="Booking document request baseline with status visibility.">
+        <div>
           {rows.length === 0 ? (
-            <div className="internal-empty-state">
-              No document requests available.
-            </div>
+            <ProTableEmptyState title="No document requests" description="No document requests available." />
           ) : (
-            <Table>
+            <ProTable>
               <TableHeader>
                 <TableRow>
                   <TableHead>Booking</TableHead>
@@ -75,7 +68,7 @@ export default async function AdminDocumentsPage() {
                         <TableCell>{item.documentTypeName}</TableCell>
                         <TableCell>{item.participantName ?? "Booking-level"}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{item.requestStatus}</Badge>
+                          <ProStatusBadge label={item.requestStatus} status="pending" />
                         </TableCell>
                         <TableCell>{formatDateTime(item.dueAt)}</TableCell>
                         <TableCell>{formatDateTime(item.requestedAt)}</TableCell>
@@ -85,9 +78,9 @@ export default async function AdminDocumentsPage() {
                               <input type="hidden" name="requestId" value={item.id} />
                               <input type="hidden" name="toStatus" value={nextStatus} />
                               <input type="hidden" name="nextPath" value={ROUTES.admin.documents} />
-                              <Button type="submit" size="sm" variant="outline">
+                              <ProButton type="submit" size="sm" variant="outline">
                                 Move to {nextStatus}
-                              </Button>
+                              </ProButton>
                             </form>
                           ) : (
                             <span className="text-xs text-muted-foreground">Final</span>
@@ -98,10 +91,10 @@ export default async function AdminDocumentsPage() {
                   })()
                 ))}
               </TableBody>
-            </Table>
+            </ProTable>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </ActionCard>
     </section>
   )
 }

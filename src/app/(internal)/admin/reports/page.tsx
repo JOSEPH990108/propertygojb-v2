@@ -1,16 +1,19 @@
 import Link from "next/link"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Table,
+  ActionCard,
+  MetricCard,
+  ProButton,
+  ProEmptyState,
+  ProPanel,
+  ProStatusBadge,
+  ProTable,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import { listAdminAgents } from "@/lib/admin/agents/actions"
 import { listAdminProperties } from "@/lib/admin/properties/actions"
@@ -85,203 +88,171 @@ export default async function AdminReportsPage() {
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Reports</CardTitle>
-          <CardDescription>
-            Operational reporting baseline for admin decision support across user, property, lead, booking,
-            document, and WhatsApp domains.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Internal users</div>
-              <div className="text-xl font-semibold">{usersResult.total}</div>
-            </div>
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Customers</div>
-              <div className="text-xl font-semibold">{customersResult.total}</div>
-            </div>
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Properties</div>
-              <div className="text-xl font-semibold">{propertiesResult.total}</div>
-            </div>
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Agents (active / total)</div>
-              <div className="text-xl font-semibold">
-                {agentsActiveResult.total} / {agentsAllResult.total}
-              </div>
-            </div>
+      <ActionCard
+        title="Reports"
+        description={
+          "Operational reporting baseline for admin decision support across user, property, lead, booking, document, and WhatsApp domains."
+        }
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <ProButton asChild size="sm" variant="outline">
+              <Link href={ROUTES.admin.leads}>Inspect Leads</Link>
+            </ProButton>
+            <ProButton asChild size="sm" variant="outline">
+              <Link href={ROUTES.admin.bookings}>Inspect Bookings</Link>
+            </ProButton>
+            <ProButton asChild size="sm" variant="outline">
+              <Link href={ROUTES.admin.documents}>Inspect Documents</Link>
+            </ProButton>
           </div>
+        }
+      >
+        <div className="space-y-4">
+          <ProPanel className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard label="Internal users" value={usersResult.total} hint="Current visible total" />
+            <MetricCard label="Customers" value={customersResult.total} hint="Customer accounts" accent="blue" />
+            <MetricCard label="Properties" value={propertiesResult.total} hint="Inventory records" accent="green" />
+            <MetricCard
+              label="Agents (active / total)"
+              value={`${agentsActiveResult.total} / ${agentsAllResult.total}`}
+              hint="Workforce availability"
+              accent="amber"
+            />
+          </ProPanel>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Open WhatsApp conversations</div>
-              <div className="text-xl font-semibold">{whatsappOverview.openConversations.length}</div>
-            </div>
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Active WhatsApp queues</div>
-              <div className="text-xl font-semibold">{activeQueueCount}</div>
-            </div>
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Document requests sampled</div>
-              <div className="text-xl font-semibold">{documentRequests.length}</div>
-            </div>
+            <MetricCard label="Open WhatsApp conversations" value={whatsappOverview.openConversations.length} hint="Latest open queue" />
+            <MetricCard label="Active WhatsApp queues" value={activeQueueCount} hint="Enabled queue lanes" accent="blue" />
+            <MetricCard label="Document requests sampled" value={documentRequests.length} hint="Latest 100 records" accent="green" />
           </div>
 
           <div className="grid gap-4 xl:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Lead status snapshot</CardTitle>
-                <CardDescription>Latest 100 leads</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {leadsByStatus.length === 0 ? (
-                  <div className="internal-empty-state p-4">
-                    No lead records found.
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Count</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {leadsByStatus.map((row) => (
-                        <TableRow key={row.label}>
-                          <TableCell>
-                            <Badge variant="outline">{row.label}</Badge>
-                          </TableCell>
-                          <TableCell>{row.count}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Booking status snapshot</CardTitle>
-                <CardDescription>Latest 100 bookings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {bookingsByStatus.length === 0 ? (
-                  <div className="internal-empty-state p-4">
-                    No booking records found.
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Count</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {bookingsByStatus.map((row) => (
-                        <TableRow key={row.label}>
-                          <TableCell>
-                            <Badge variant="outline">{row.label}</Badge>
-                          </TableCell>
-                          <TableCell>{row.count}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Document request snapshot</CardTitle>
-                <CardDescription>Latest 100 document requests</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {documentsByStatus.length === 0 ? (
-                  <div className="internal-empty-state p-4">
-                    No document request records found.
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Count</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {documentsByStatus.map((row) => (
-                        <TableRow key={row.label}>
-                          <TableCell>
-                            <Badge variant="outline">{row.label}</Badge>
-                          </TableCell>
-                          <TableCell>{row.count}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Open WhatsApp conversations</CardTitle>
-              <CardDescription>Latest open conversations (up to 50)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {whatsappOverview.openConversations.length === 0 ? (
-                <div className="internal-empty-state p-4">
-                  No open conversations found.
-                </div>
+            <ProPanel className="space-y-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Lead status snapshot</h3>
+                <p className="text-sm text-muted-foreground">Latest 100 leads</p>
+              </div>
+              {leadsByStatus.length === 0 ? (
+                <ProEmptyState title="No lead records" description="No lead records found." />
               ) : (
-                <Table>
+                <ProTable>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Queue</TableHead>
-                      <TableHead>Owner</TableHead>
-                      <TableHead>Last Message</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Count</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {whatsappOverview.openConversations.map((conversation) => (
-                      <TableRow key={conversation.id}>
+                    {leadsByStatus.map((row) => (
+                      <TableRow key={row.label}>
                         <TableCell>
-                          {conversation.customerDisplayName ?? conversation.customerPhoneE164}
+                          <ProStatusBadge label={row.label} status="pending" />
                         </TableCell>
-                        <TableCell>{conversation.queueName ?? "-"}</TableCell>
-                        <TableCell>{conversation.ownerName ?? "Unassigned"}</TableCell>
-                        <TableCell>{formatDateTime(conversation.lastMessageAt)}</TableCell>
+                        <TableCell>{row.count}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </ProTable>
               )}
-            </CardContent>
-          </Card>
+            </ProPanel>
 
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span>Status snapshots are computed from latest 100 records per domain for fast operational checks.</span>
-            <Button asChild size="sm" variant="outline">
-              <Link href={ROUTES.admin.leads}>Inspect Leads</Link>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link href={ROUTES.admin.bookings}>Inspect Bookings</Link>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link href={ROUTES.admin.documents}>Inspect Documents</Link>
-            </Button>
+            <ProPanel className="space-y-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Booking status snapshot</h3>
+                <p className="text-sm text-muted-foreground">Latest 100 bookings</p>
+              </div>
+              {bookingsByStatus.length === 0 ? (
+                <ProEmptyState title="No booking records" description="No booking records found." />
+              ) : (
+                <ProTable>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Count</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bookingsByStatus.map((row) => (
+                      <TableRow key={row.label}>
+                        <TableCell>
+                          <ProStatusBadge label={row.label} status="pending" />
+                        </TableCell>
+                        <TableCell>{row.count}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </ProTable>
+              )}
+            </ProPanel>
+
+            <ProPanel className="space-y-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Document request snapshot</h3>
+                <p className="text-sm text-muted-foreground">Latest 100 document requests</p>
+              </div>
+              {documentsByStatus.length === 0 ? (
+                <ProEmptyState title="No document requests" description="No document request records found." />
+              ) : (
+                <ProTable>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Count</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {documentsByStatus.map((row) => (
+                      <TableRow key={row.label}>
+                        <TableCell>
+                          <ProStatusBadge label={row.label} status="pending" />
+                        </TableCell>
+                        <TableCell>{row.count}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </ProTable>
+              )}
+            </ProPanel>
           </div>
-        </CardContent>
-      </Card>
+
+          <ProPanel className="space-y-3">
+            <div>
+              <h3 className="text-base font-semibold text-foreground">Open WhatsApp conversations</h3>
+              <p className="text-sm text-muted-foreground">Latest open conversations (up to 50)</p>
+            </div>
+            {whatsappOverview.openConversations.length === 0 ? (
+              <ProEmptyState title="No open conversations" description="No open conversations found." />
+            ) : (
+              <ProTable>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Queue</TableHead>
+                    <TableHead>Owner</TableHead>
+                    <TableHead>Last Message</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {whatsappOverview.openConversations.map((conversation) => (
+                    <TableRow key={conversation.id}>
+                      <TableCell>
+                        {conversation.customerDisplayName ?? conversation.customerPhoneE164}
+                      </TableCell>
+                      <TableCell>{conversation.queueName ?? "-"}</TableCell>
+                      <TableCell>{conversation.ownerName ?? "Unassigned"}</TableCell>
+                      <TableCell>{formatDateTime(conversation.lastMessageAt)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </ProTable>
+            )}
+          </ProPanel>
+
+          <div className="text-xs text-muted-foreground">
+            Status snapshots are computed from latest 100 records per domain for fast operational checks.
+          </div>
+        </div>
+      </ActionCard>
     </section>
   )
 }

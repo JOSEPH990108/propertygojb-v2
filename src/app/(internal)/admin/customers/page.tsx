@@ -1,9 +1,7 @@
 import Link from "next/link"
 
 import { AdminCustomersTable } from "@/components/admin/customers/admin-customers-table"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { ActionCard, ProButton, ProSearchInput, ProTablePagination, ProTableToolbar } from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import { listAdminUsers } from "@/lib/admin/users/actions"
 
@@ -72,26 +70,22 @@ export default async function AdminCustomersPage({ searchParams }: CustomersPage
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Customers</CardTitle>
-          <CardDescription>
-            Customer account directory with core profile and contact visibility.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form action={ROUTES.admin.customers} className="grid gap-3 md:grid-cols-[2fr_auto_auto]">
-            <Input
-              name="q"
-              defaultValue={result.search}
-              placeholder="Search by customer name, email, or phone"
-            />
-            <Button type="submit" variant="outline">
-              Apply
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href={ROUTES.admin.customers}>Reset</Link>
-            </Button>
+      <ActionCard title="Customers" description="Customer account directory with core profile and contact visibility.">
+        <div className="space-y-4">
+          <form action={ROUTES.admin.customers}>
+            <ProTableToolbar className="grid gap-3 md:grid-cols-[2fr_auto_auto]">
+              <ProSearchInput
+                name="q"
+                defaultValue={result.search}
+                placeholder="Search by customer name, email, or phone"
+              />
+              <ProButton type="submit" variant="outline">
+                Apply
+              </ProButton>
+              <ProButton asChild variant="ghost">
+                <Link href={ROUTES.admin.customers}>Reset</Link>
+              </ProButton>
+            </ProTableToolbar>
           </form>
 
           <div className="text-xs text-muted-foreground">
@@ -100,21 +94,14 @@ export default async function AdminCustomersPage({ searchParams }: CustomersPage
 
           <AdminCustomersTable customers={result.users} />
 
-          <div className="internal-divider flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Page {result.page} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline" disabled={result.page <= 1}>
-                <Link href={previousHref}>Previous</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" disabled={result.page >= totalPages}>
-                <Link href={nextHref}>Next</Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <ProTablePagination
+            page={result.page}
+            totalPages={totalPages}
+            previousHref={previousHref}
+            nextHref={nextHref}
+          />
+        </div>
+      </ActionCard>
     </section>
   )
 }

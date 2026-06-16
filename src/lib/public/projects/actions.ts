@@ -256,6 +256,63 @@ function buildPublishedProjectClauses(): SQL<unknown>[] {
   ]
 }
 
+async function listPublicCategoryOptionsSafe(): Promise<PublicProjectFilterOption[]> {
+  if (!db) {
+    return []
+  }
+
+  try {
+    return await db
+      .select({ id: propertyCategories.id, name: propertyCategories.name })
+      .from(propertyCategories)
+      .where(and(eq(propertyCategories.isActive, true), isNull(propertyCategories.deletedAt)))
+      .orderBy(asc(propertyCategories.sortOrder), asc(propertyCategories.name))
+  } catch {
+    return await db
+      .select({ id: propertyCategories.id, name: propertyCategories.name })
+      .from(propertyCategories)
+      .orderBy(asc(propertyCategories.name))
+  }
+}
+
+async function listPublicStatusOptionsSafe(): Promise<PublicProjectFilterOption[]> {
+  if (!db) {
+    return []
+  }
+
+  try {
+    return await db
+      .select({ id: projectStatuses.id, name: projectStatuses.name })
+      .from(projectStatuses)
+      .where(and(eq(projectStatuses.isActive, true), isNull(projectStatuses.deletedAt)))
+      .orderBy(asc(projectStatuses.sortOrder), asc(projectStatuses.name))
+  } catch {
+    return await db
+      .select({ id: projectStatuses.id, name: projectStatuses.name })
+      .from(projectStatuses)
+      .orderBy(asc(projectStatuses.name))
+  }
+}
+
+async function listPublicRegionOptionsSafe(): Promise<PublicProjectFilterOption[]> {
+  if (!db) {
+    return []
+  }
+
+  try {
+    return await db
+      .select({ id: regions.id, name: regions.name })
+      .from(regions)
+      .where(isNull(regions.deletedAt))
+      .orderBy(asc(regions.name))
+  } catch {
+    return await db
+      .select({ id: regions.id, name: regions.name })
+      .from(regions)
+      .orderBy(asc(regions.name))
+  }
+}
+
 export async function listPublicProjects(
   params: PublicProjectListParams = {},
 ): Promise<PublicProjectListResult> {
@@ -326,21 +383,9 @@ export async function listPublicProjects(
       .leftJoin(areas, eq(projects.areaId, areas.id))
       .leftJoin(regions, eq(projects.regionId, regions.id))
       .where(whereExpression),
-    db
-      .select({ id: propertyCategories.id, name: propertyCategories.name })
-      .from(propertyCategories)
-      .where(and(eq(propertyCategories.isActive, true), isNull(propertyCategories.deletedAt)))
-      .orderBy(asc(propertyCategories.sortOrder), asc(propertyCategories.name)),
-    db
-      .select({ id: projectStatuses.id, name: projectStatuses.name })
-      .from(projectStatuses)
-      .where(and(eq(projectStatuses.isActive, true), isNull(projectStatuses.deletedAt)))
-      .orderBy(asc(projectStatuses.sortOrder), asc(projectStatuses.name)),
-    db
-      .select({ id: regions.id, name: regions.name })
-      .from(regions)
-      .where(isNull(regions.deletedAt))
-      .orderBy(asc(regions.name)),
+    listPublicCategoryOptionsSafe(),
+    listPublicStatusOptionsSafe(),
+    listPublicRegionOptionsSafe(),
   ])
 
   const total = countRows[0]?.total ?? 0

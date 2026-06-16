@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge"
+import { ProStatusBadge } from "@/components/pro-ui"
 
 type UserRoleBadgeProps = {
   roleCode: "CUSTOMER" | "AGENT" | "ADMIN" | "SUPER_ADMIN" | null
@@ -6,20 +6,20 @@ type UserRoleBadgeProps = {
 
 export function UserRoleBadge({ roleCode }: UserRoleBadgeProps) {
   if (!roleCode) {
-    return <Badge variant="outline">Unknown</Badge>
+    return <ProStatusBadge label="Unknown" status="neutral" />
   }
 
   if (roleCode === "SUPER_ADMIN") {
-    return <Badge variant="destructive">SUPER_ADMIN</Badge>
+    return <ProStatusBadge label="SUPER_ADMIN" status="error" />
   }
 
   if (roleCode === "ADMIN") {
-    return <Badge variant="default">ADMIN</Badge>
+    return <ProStatusBadge label="ADMIN" status="published" />
   }
 
   if (roleCode === "AGENT") {
-    return <Badge variant="secondary">AGENT</Badge>
+    return <ProStatusBadge label="AGENT" status="info" />
   }
 
-  return <Badge variant="outline">CUSTOMER</Badge>
+  return <ProStatusBadge label="CUSTOMER" status="neutral" />
 }

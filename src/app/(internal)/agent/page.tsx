@@ -1,106 +1,72 @@
 import Link from "next/link"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ActionCard, MetricCard, ProButton, ProStatusBadge } from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 
 export default function AgentDashboardPage() {
   return (
     <section className="internal-page">
-      <Card className="internal-fade-up">
-        <CardHeader className="space-y-2">
+      <ActionCard title="Frontline Workspace" description="Execution view for lead engagement, appointment transitions, booking handoffs, and customer continuity.">
+        <div className="space-y-2">
           <p className="internal-kicker">Agent Operations Hub</p>
-          <CardTitle className="text-2xl">Frontline Workspace</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Execution view for lead engagement, appointment transitions, booking handoffs, and customer continuity.
-            Workflow controls remain role-scoped and policy-safe.
-          </p>
+          <p className="max-w-3xl text-sm text-muted-foreground">Workflow controls remain role-scoped and policy-safe.</p>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button asChild>
+            <ProButton asChild variant="gradient">
               <Link href={ROUTES.agent.leads}>Open Leads</Link>
-            </Button>
-            <Button asChild variant="outline">
+            </ProButton>
+            <ProButton asChild variant="outline">
               <Link href={ROUTES.agent.bookings}>Open Bookings</Link>
-            </Button>
-            <Button asChild variant="outline">
+            </ProButton>
+            <ProButton asChild variant="outline">
               <Link href={ROUTES.agent.customers}>Open Customers</Link>
-            </Button>
+            </ProButton>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ActionCard>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="internal-fade-up-delay-1">
-          <CardHeader className="space-y-2">
+        <ActionCard title="Leads" description="Lead queue and follow-up execution workspace." className="internal-fade-up-delay-1">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-base">Leads</CardTitle>
-              <Badge variant="outline">Live</Badge>
+              <ProStatusBadge label="Live" status="published" />
             </div>
-            <p className="text-sm text-muted-foreground">
-              Lead queue and follow-up execution workspace.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Button asChild size="sm" variant="outline">
+            <ProButton asChild size="sm" variant="outline">
               <Link href={ROUTES.agent.leads}>Open Leads</Link>
-            </Button>
-          </CardContent>
-        </Card>
+            </ProButton>
+        </ActionCard>
 
-        <Card className="internal-fade-up-delay-1">
-          <CardHeader className="space-y-2">
+        <ActionCard title="Bookings" description="Appointment and booking progress coordination." className="internal-fade-up-delay-1">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-base">Bookings</CardTitle>
-              <Badge variant="outline">Live</Badge>
+              <ProStatusBadge label="Live" status="published" />
             </div>
-            <p className="text-sm text-muted-foreground">
-              Appointment and booking progress coordination.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Button asChild size="sm" variant="outline">
+            <ProButton asChild size="sm" variant="outline">
               <Link href={ROUTES.agent.bookings}>Open Bookings</Link>
-            </Button>
-          </CardContent>
-        </Card>
+            </ProButton>
+        </ActionCard>
 
-        <Card className="internal-fade-up-delay-2">
-          <CardHeader className="space-y-2">
+        <ActionCard title="Customers" description="Customer pipeline context and communication history." className="internal-fade-up-delay-2">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-base">Customers</CardTitle>
-              <Badge variant="outline">Live</Badge>
+              <ProStatusBadge label="Live" status="published" />
             </div>
-            <p className="text-sm text-muted-foreground">
-              Customer pipeline context and communication history.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Button asChild size="sm" variant="outline">
+            <ProButton asChild size="sm" variant="outline">
               <Link href={ROUTES.agent.customers}>Open Customers</Link>
-            </Button>
-          </CardContent>
-        </Card>
+            </ProButton>
+        </ActionCard>
 
-        <Card className="internal-fade-up-delay-2">
-          <CardHeader className="space-y-2">
+        <ActionCard title="Profile" description="Personal settings and preferences for agent workflows." className="internal-fade-up-delay-2">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-base">Profile</CardTitle>
-              <Badge variant="outline">Live</Badge>
+              <ProStatusBadge label="Live" status="published" />
             </div>
-            <p className="text-sm text-muted-foreground">
-              Personal settings and preferences for agent workflows.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Button asChild size="sm" variant="outline">
+            <ProButton asChild size="sm" variant="outline">
               <Link href={ROUTES.agent.profile}>Open Profile</Link>
-            </Button>
-          </CardContent>
-        </Card>
+            </ProButton>
+        </ActionCard>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <MetricCard label="Focus" value="Leads" hint="Follow-up and conversion flow" />
+        <MetricCard label="Pipeline" value="Bookings" hint="Status transition controls" accent="blue" />
+        <MetricCard label="Portfolio" value="Customers" hint="Active account continuity" accent="green" />
       </div>
     </section>
   )

@@ -3,23 +3,15 @@
 import { useMemo, useState, useTransition } from "react"
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
+  ProAlert,
+  ProButton,
+  ProField,
+  ProModal,
+  ProSelect,
+  ProStatusBadge,
+  ProTextarea,
+  ProValidationMessage,
+} from "@/components/pro-ui"
 import type { AdminUserListItem } from "@/lib/admin/users/actions"
 import { assignInternalUserRoleAction } from "@/lib/admin/users/server-actions"
 
@@ -86,6 +78,10 @@ export function RoleChangeDialog({
     () => [...roleChangePermission.allowedTargetRoles],
     [roleChangePermission.allowedTargetRoles],
   )
+  const roleSelectOptions = useMemo(
+    () => roleOptions.map((role) => ({ value: role, label: role })),
+    [roleOptions],
+  )
 
   const disabledByPolicy = !roleChangePermission.canChange || roleOptions.length === 0
 
@@ -102,13 +98,6 @@ export function RoleChangeDialog({
     setReasonNote("")
     setMessage("")
     setErrorMessage("")
-  }
-
-  function handleOpenChange(nextOpen: boolean) {
-    setIsOpen(nextOpen)
-    if (!nextOpen) {
-      resetDialogState()
-    }
   }
 
   function handleSubmit() {
@@ -134,86 +123,88 @@ export function RoleChangeDialog({
       }
 
       setMessage(`Role updated from ${result.previousRole} to ${result.newRole}.`)
-      setTimeout(() => {
+        setTimeout(() => {
         setIsOpen(false)
-      }, 600)
+        resetDialogState()
+        }, 600)
     })
   }
 
   if (disabledByPolicy) {
     return (
       <div className="space-y-1">
-        <Button size="sm" variant="outline" disabled>
+          <ProButton size="sm" variant="outline" disabled>
           Change Role
-        </Button>
-        <p className="text-xs text-muted-foreground">{blockedMessage}</p>
+          </ProButton>
+          <ProAlert tone="warning" title="Role change unavailable" description={blockedMessage} />
       </div>
     )
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Change Role
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Change User Role</DialogTitle>
-          <DialogDescription>
-            Update role for {userName}. Server-side policy enforcement is always applied.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-3">
-          <div className="text-xs text-muted-foreground">
-            Current role: {currentRole ? ROLE_LABEL[currentRole] : "Unknown"}
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Target role</p>
-            <Select
-              value={targetRole}
-              onValueChange={(value) => setTargetRole(value as AssignableRole)}
+      <ProModal
+        open={isOpen}
+        onOpenChange={(nextOpen) => {
+          setIsOpen(nextOpen)
+          if (!nextOpen) {
+            resetDialogState()
+          }
+        }}
+        trigger={<ProButton size="sm" variant="outline">Change Role</ProButton>}
+        title="Change User Role"
+        description={`Update role for ${userName}. Server-side policy enforcement is always applied.`}
+        footer={(
+          <>
+            <ProButton
+              variant="outline"
+              onClick={() => {
+                setIsOpen(false)
+                resetDialogState()
+              }}
               disabled={isPending}
             >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select target role" />
-              </SelectTrigger>
-              <SelectContent>
-                {roleOptions.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              Cancel
+            </ProButton>
+            <ProButton onClick={handleSubmit} disabled={!canSubmit} loading={isPending}>
+              Save
+            </ProButton>
+          </>
+        )}
+      >
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Current role:</span>
+            <ProStatusBadge label={currentRole ? ROLE_LABEL[currentRole] : "Unknown"} status="info" />
           </div>
 
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Reason note</p>
-            <Textarea
+          <ProField label="Target role" required errorMessage={targetRole ? undefined : errorMessage ? "Select a target role." : undefined}>
+            <ProSelect
+              value={targetRole || undefined}
+              onValueChange={(value) => setTargetRole(value as AssignableRole)}
+              disabled={isPending}
+              placeholder="Select target role"
+              options={roleSelectOptions}
+              tone={errorMessage && !targetRole ? "error" : "default"}
+            />
+          </ProField>
+
+          <ProField
+            label="Reason note"
+            required
+            errorMessage={reasonNote.trim().length > 0 ? undefined : errorMessage ? "Reason note is required." : undefined}
+          >
+            <ProTextarea
               value={reasonNote}
               onChange={(event) => setReasonNote(event.target.value)}
               placeholder="Provide reason for this role change"
               disabled={isPending}
+              tone={errorMessage && reasonNote.trim().length === 0 ? "error" : "default"}
             />
-          </div>
+          </ProField>
 
-          {errorMessage ? <p className="text-xs text-destructive">{errorMessage}</p> : null}
-          {message ? <p className="text-xs text-emerald-600">{message}</p> : null}
+          {errorMessage ? <ProValidationMessage tone="error" message={errorMessage} /> : null}
+          {message ? <ProValidationMessage tone="success" message={message} /> : null}
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isPending}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {isPending ? "Saving..." : "Save"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </ProModal>
   )
 }

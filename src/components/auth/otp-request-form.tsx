@@ -62,8 +62,8 @@ export function OtpRequestForm({ purpose }: OtpRequestFormProps) {
   }
 
   return (
-    <form className="space-y-3" onSubmit={handleSubmit}>
-      <div className="space-y-1">
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <div className="space-y-1.5">
         <label className="text-sm font-medium" htmlFor={`phone-${purpose.toLowerCase()}`}>
           Mobile number
         </label>
@@ -84,7 +84,7 @@ export function OtpRequestForm({ purpose }: OtpRequestFormProps) {
       </Button>
 
       {errorMessage ? (
-        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p className="rounded-xl border border-destructive/35 bg-destructive-soft px-3 py-2 text-sm text-destructive">
           {errorMessage}
         </p>
       ) : null}

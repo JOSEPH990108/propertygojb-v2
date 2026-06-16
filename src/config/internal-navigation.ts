@@ -25,6 +25,14 @@ export const ADMIN_INTERNAL_NAVIGATION: readonly InternalNavigationItem[] = [
     matchPaths: [ROUTES.admin.dashboard],
   },
   {
+    id: "admin-design-system",
+    label: "Design System",
+    href: ROUTES.admin.designSystem,
+    iconKey: "layout-dashboard",
+    isPlaceholder: false,
+    matchPaths: [ROUTES.admin.designSystem],
+  },
+  {
     id: "admin-users",
     label: "Users",
     href: ROUTES.admin.users,

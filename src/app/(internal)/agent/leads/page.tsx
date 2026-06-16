@@ -1,15 +1,17 @@
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import {
-  Table,
+  ActionCard,
+  ProButton,
+  ProInput,
+  ProSelect,
+  ProStatusBadge,
+  ProTable,
+  ProTableEmptyState,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import {
   LEAD_STATUS_VALUES,
@@ -46,20 +48,15 @@ export default async function AgentLeadsPage() {
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Leads</CardTitle>
-          <CardDescription>
-            Your assigned leads with workflow-safe status controls and activity freshness.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <ActionCard
+        title="Leads"
+        description="Your assigned leads with workflow-safe status controls and activity freshness."
+      >
+        <div>
           {leadRows.length === 0 ? (
-            <div className="internal-empty-state">
-              No assigned leads found.
-            </div>
+            <ProTableEmptyState title="No assigned leads" description="No assigned leads found." />
           ) : (
-            <Table>
+            <ProTable>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
@@ -87,7 +84,7 @@ export default async function AgentLeadsPage() {
                       <TableCell className="font-medium">{lead.fullName}</TableCell>
                       <TableCell>{lead.phone}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{lead.status}</Badge>
+                        <ProStatusBadge label={lead.status} status="pending" />
                       </TableCell>
                       <TableCell>{lead.sourceName ?? "-"}</TableCell>
                       <TableCell>{formatDateTime(lead.lastActivityAt)}</TableCell>
@@ -98,27 +95,22 @@ export default async function AgentLeadsPage() {
                             <input type="hidden" name="leadId" value={lead.id} />
                             <input type="hidden" name="nextPath" value={ROUTES.agent.leads} />
 
-                            <select
+                            <ProSelect
                               name="toStatus"
                               defaultValue={candidateStatuses[0]}
-                              className="internal-form-select text-xs"
-                            >
-                              {candidateStatuses.map((status) => (
-                                <option key={status} value={status}>
-                                  {status}
-                                </option>
-                              ))}
-                            </select>
+                              options={candidateStatuses.map((status) => ({ value: status, label: status }))}
+                              className="text-xs"
+                            />
 
-                            <Input
+                            <ProInput
                               name="reasonNote"
                               placeholder="Reason note (required for LOST/SPAM)"
                               className="h-8 text-xs"
                             />
 
-                            <Button type="submit" size="sm" variant="outline">
+                            <ProButton type="submit" size="sm" variant="outline">
                               Update Status
-                            </Button>
+                            </ProButton>
                           </form>
                         ) : (
                           <span className="text-xs text-muted-foreground">Final</span>
@@ -128,25 +120,20 @@ export default async function AgentLeadsPage() {
                   )
                 })}
               </TableBody>
-            </Table>
+            </ProTable>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </ActionCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>WhatsApp Open Conversations</CardTitle>
-          <CardDescription>
-            Active conversation ownership and queue placement for your scope.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <ActionCard
+        title="WhatsApp Open Conversations"
+        description="Active conversation ownership and queue placement for your scope."
+      >
+        <div>
           {whatsapp.openConversations.length === 0 ? (
-            <div className="internal-empty-state">
-              No open conversations assigned to you.
-            </div>
+            <ProTableEmptyState title="No open conversations" description="No open conversations assigned to you." />
           ) : (
-            <Table>
+            <ProTable>
               <TableHeader>
                 <TableRow>
                   <TableHead>Customer</TableHead>
@@ -172,10 +159,10 @@ export default async function AgentLeadsPage() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </ProTable>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </ActionCard>
     </section>
   )
 }

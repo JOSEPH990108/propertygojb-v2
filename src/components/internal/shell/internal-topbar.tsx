@@ -63,7 +63,7 @@ export function InternalTopbar({ portal, navigation }: InternalTopbarProps) {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
-          <div className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground">
+          <div className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
             Live Workspace
           </div>
           <p className="text-xs text-muted-foreground">{todayLabel}</p>

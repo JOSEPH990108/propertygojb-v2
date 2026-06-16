@@ -1,16 +1,14 @@
-import Link from "next/link"
-
 import {
-  Table,
+  ProTable,
+  ProTableActions,
+  ProTableEmptyState,
+  ProTableStatusBadge,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { ProjectPublishBadge } from "@/components/admin/projects/project-publish-badge"
-import { ProjectStatusBadge } from "@/components/admin/projects/project-status-badge"
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import type { AdminProjectListItem } from "@/lib/admin/projects/actions"
 
@@ -54,14 +52,15 @@ function renderTenureTitle(project: AdminProjectListItem): string {
 export function AdminProjectsTable({ projects }: AdminProjectsTableProps) {
   if (projects.length === 0) {
     return (
-      <div className="internal-empty-state">
-        No projects found for the current filters.
-      </div>
+      <ProTableEmptyState
+        title="No projects found"
+        description="Adjust filters or create a new project to get started."
+      />
     )
   }
 
   return (
-    <Table>
+    <ProTable>
       <TableHeader>
         <TableRow>
           <TableHead>Project</TableHead>
@@ -94,10 +93,10 @@ export function AdminProjectsTable({ projects }: AdminProjectsTableProps) {
             <TableCell>{project.developerName ?? "-"}</TableCell>
             <TableCell>{renderLocation(project)}</TableCell>
             <TableCell>
-              <ProjectStatusBadge statusName={project.projectStatusName} />
+              <ProTableStatusBadge status={project.projectStatusName ?? "Unknown"} />
             </TableCell>
             <TableCell>
-              <ProjectPublishBadge isPublished={project.isPublished} />
+              <ProTableStatusBadge status={project.isPublished ? "Published" : "Draft"} />
             </TableCell>
             <TableCell>{renderType(project)}</TableCell>
             <TableCell>{renderTenureTitle(project)}</TableCell>
@@ -106,13 +105,18 @@ export function AdminProjectsTable({ projects }: AdminProjectsTableProps) {
             <TableCell>{formatDateTime(project.createdAt)}</TableCell>
             <TableCell>{formatDateTime(project.updatedAt)}</TableCell>
             <TableCell>
-              <Button asChild size="sm" variant="outline">
-                <Link href={ROUTES.admin.projectEdit(project.id)}>Edit</Link>
-              </Button>
+              <ProTableActions
+                actions={[
+                  {
+                    label: "Edit",
+                    href: ROUTES.admin.projectEdit(project.id),
+                  },
+                ]}
+              />
             </TableCell>
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </ProTable>
   )
 }

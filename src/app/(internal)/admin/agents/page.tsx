@@ -1,9 +1,7 @@
 import Link from "next/link"
 
 import { AdminAgentsTable } from "@/components/admin/agents/admin-agents-table"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { ActionCard, ProButton, ProSearchInput, ProSelect, ProTableFilter, ProTablePagination, ProTableToolbar } from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import { listAdminAgents } from "@/lib/admin/agents/actions"
 
@@ -83,35 +81,33 @@ export default async function AdminAgentsPage({ searchParams }: AgentsPageProps)
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Agents</CardTitle>
-          <CardDescription>
-            Agent directory with active-state control and registration profile visibility.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form action={ROUTES.admin.agents} className="grid gap-3 md:grid-cols-[2fr_1fr_auto_auto]">
-            <Input
-              name="q"
-              defaultValue={result.search}
-              placeholder="Search by name, email, phone, agency, or REN"
-            />
-            <select
-              name="state"
-              defaultValue={result.state}
-              className="internal-form-select"
-            >
-              <option value="ALL">All states</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-            </select>
-            <Button type="submit" variant="outline">
-              Apply
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href={ROUTES.admin.agents}>Reset</Link>
-            </Button>
+      <ActionCard title="Agents" description="Agent directory with active-state control and registration profile visibility.">
+        <div className="space-y-4">
+          <form action={ROUTES.admin.agents}>
+            <ProTableToolbar className="grid gap-3 md:grid-cols-[2fr_1fr_auto_auto]">
+              <ProSearchInput
+                name="q"
+                defaultValue={result.search}
+                placeholder="Search by name, email, phone, agency, or REN"
+              />
+              <ProTableFilter as="div" className="min-h-11 p-0" showIcon={false}>
+                <ProSelect
+                  name="state"
+                  defaultValue={result.state}
+                  options={[
+                    { value: "ALL", label: "All states" },
+                    { value: "ACTIVE", label: "Active" },
+                    { value: "INACTIVE", label: "Inactive" },
+                  ]}
+                />
+              </ProTableFilter>
+              <ProButton type="submit" variant="outline">
+                Apply
+              </ProButton>
+              <ProButton asChild variant="ghost">
+                <Link href={ROUTES.admin.agents}>Reset</Link>
+              </ProButton>
+            </ProTableToolbar>
           </form>
 
           <div className="text-xs text-muted-foreground">
@@ -120,21 +116,14 @@ export default async function AdminAgentsPage({ searchParams }: AgentsPageProps)
 
           <AdminAgentsTable agents={result.agents} />
 
-          <div className="internal-divider flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Page {result.page} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline" disabled={result.page <= 1}>
-                <Link href={previousHref}>Previous</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" disabled={result.page >= totalPages}>
-                <Link href={nextHref}>Next</Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <ProTablePagination
+            page={result.page}
+            totalPages={totalPages}
+            previousHref={previousHref}
+            nextHref={nextHref}
+          />
+        </div>
+      </ActionCard>
     </section>
   )
 }

@@ -20,4 +20,5 @@ export type InternalTopbarProps = {
 export type InternalNavItemProps = {
   item: InternalNavigationItem
   compact?: boolean
+  collapsed?: boolean
 }

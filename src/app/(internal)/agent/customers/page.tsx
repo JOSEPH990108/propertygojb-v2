@@ -1,17 +1,20 @@
 import Link from "next/link"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import {
-  Table,
+  ActionCard,
+  ProButton,
+  ProSearchInput,
+  ProStatusBadge,
+  ProTable,
+  ProTableEmptyState,
+  ProTablePagination,
+  ProTableToolbar,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import { listAgentCustomers } from "@/lib/agent/customers/actions"
 
@@ -91,43 +94,40 @@ export default async function AgentCustomersPage({ searchParams }: AgentCustomer
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Customers</CardTitle>
-          <CardDescription>
-            Assigned customer portfolio with lead status and booking context for your queue.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form action={ROUTES.agent.customers} className="grid gap-3 md:grid-cols-[2fr_auto_auto]">
-            <Input
-              name="q"
-              defaultValue={result.search}
-              placeholder="Search by customer name, phone, or email"
-            />
-            <Button type="submit" variant="outline">
-              Apply
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href={ROUTES.agent.customers}>Reset</Link>
-            </Button>
+      <ActionCard
+        title="Customers"
+        description="Assigned customer portfolio with lead status and booking context for your queue."
+      >
+        <div className="space-y-4">
+          <form action={ROUTES.agent.customers}>
+            <ProTableToolbar className="grid gap-3 md:grid-cols-[2fr_auto_auto]">
+              <ProSearchInput
+                name="q"
+                defaultValue={result.search}
+                placeholder="Search by customer name, phone, or email"
+              />
+              <ProButton type="submit" variant="outline">
+                Apply
+              </ProButton>
+              <ProButton asChild variant="ghost">
+                <Link href={ROUTES.agent.customers}>Reset</Link>
+              </ProButton>
+            </ProTableToolbar>
           </form>
 
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
             <span>
               Showing {result.customers.length} of {result.total} assigned customers.
             </span>
-            <Button asChild size="sm" variant="outline">
+            <ProButton asChild size="sm" variant="outline">
               <Link href={ROUTES.agent.leads}>Open Leads Workspace</Link>
-            </Button>
+            </ProButton>
           </div>
 
           {result.customers.length === 0 ? (
-            <div className="internal-empty-state">
-              No assigned customers found for the current filters.
-            </div>
+            <ProTableEmptyState title="No assigned customers" description="No assigned customers found for the current filters." />
           ) : (
-            <Table>
+            <ProTable>
               <TableHeader>
                 <TableRow>
                   <TableHead>Customer</TableHead>
@@ -146,7 +146,7 @@ export default async function AgentCustomersPage({ searchParams }: AgentCustomer
                     <TableCell>{customer.phone}</TableCell>
                     <TableCell>{customer.email ?? "-"}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{customer.status}</Badge>
+                      <ProStatusBadge label={customer.status} status="pending" />
                     </TableCell>
                     <TableCell>{customer.activeBookingCount}</TableCell>
                     <TableCell>{formatDateTime(customer.lastActivityAt)}</TableCell>
@@ -154,24 +154,17 @@ export default async function AgentCustomersPage({ searchParams }: AgentCustomer
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </ProTable>
           )}
 
-          <div className="internal-divider flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Page {result.page} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline" disabled={result.page <= 1}>
-                <Link href={previousHref}>Previous</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" disabled={result.page >= totalPages}>
-                <Link href={nextHref}>Next</Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <ProTablePagination
+            page={result.page}
+            totalPages={totalPages}
+            previousHref={previousHref}
+            nextHref={nextHref}
+          />
+        </div>
+      </ActionCard>
     </section>
   )
 }

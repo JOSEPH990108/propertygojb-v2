@@ -1,17 +1,22 @@
 import Link from "next/link"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import {
-  Table,
+  ActionCard,
+  MetricCard,
+  ProButton,
+  ProSearchInput,
+  ProSelect,
+  ProStatusBadge,
+  ProTable,
+  ProTableEmptyState,
+  ProTableFilter,
+  ProTableToolbar,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import { listWorkspaceLeads, type WorkspaceLeadItem } from "@/lib/internal/leads/actions"
 
@@ -102,50 +107,42 @@ export default async function AdminAppointmentsPage({ searchParams }: Appointmen
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Appointments</CardTitle>
-          <CardDescription>
-            Appointment scheduling queue baseline built from current lead pipeline statuses.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <ActionCard
+        title="Appointments"
+        description="Appointment scheduling queue baseline built from current lead pipeline statuses."
+      >
+        <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Appointment set</div>
-              <div className="text-xl font-semibold">{scheduledCount}</div>
-            </div>
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Pipeline (qualified/nurturing)</div>
-              <div className="text-xl font-semibold">{pipelineCount}</div>
-            </div>
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Unassigned leads</div>
-              <div className="text-xl font-semibold">{unassignedCount}</div>
-            </div>
+            <MetricCard label="Appointment Set" value={scheduledCount} hint="Confirmed scheduled leads" />
+            <MetricCard label="Pipeline" value={pipelineCount} hint="Qualified and nurturing" accent="blue" />
+            <MetricCard label="Unassigned" value={unassignedCount} hint="Needs assignment" accent="amber" />
           </div>
 
-          <form action={ROUTES.admin.appointments} className="grid gap-3 md:grid-cols-[2fr_1fr_auto_auto]">
-            <Input
-              name="q"
-              defaultValue={search}
-              placeholder="Search by lead name, phone, status, or assignee"
-            />
-            <select
-              name="scope"
-              defaultValue={scope}
-              className="internal-form-select"
-            >
-              <option value="ALL">All scopes</option>
-              <option value="SCHEDULED">Appointment set</option>
-              <option value="PIPELINE">Qualified / Nurturing</option>
-            </select>
-            <Button type="submit" variant="outline">
-              Apply
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href={ROUTES.admin.appointments}>Reset</Link>
-            </Button>
+          <form action={ROUTES.admin.appointments}>
+            <ProTableToolbar className="grid gap-3 md:grid-cols-[2fr_1fr_auto_auto]">
+              <ProSearchInput
+                name="q"
+                defaultValue={search}
+                placeholder="Search by lead name, phone, status, or assignee"
+              />
+              <ProTableFilter as="div" className="min-h-11 p-0" showIcon={false}>
+                <ProSelect
+                  name="scope"
+                  defaultValue={scope}
+                  options={[
+                    { value: "ALL", label: "All scopes" },
+                    { value: "SCHEDULED", label: "Appointment set" },
+                    { value: "PIPELINE", label: "Qualified / Nurturing" },
+                  ]}
+                />
+              </ProTableFilter>
+              <ProButton type="submit" variant="outline">
+                Apply
+              </ProButton>
+              <ProButton asChild variant="ghost">
+                <Link href={ROUTES.admin.appointments}>Reset</Link>
+              </ProButton>
+            </ProTableToolbar>
           </form>
 
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
@@ -153,21 +150,19 @@ export default async function AdminAppointmentsPage({ searchParams }: Appointmen
               Showing {filteredLeads.length} of {leads.length} recent leads (up to latest 100 rows).
             </span>
             <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline">
+              <ProButton asChild size="sm" variant="outline">
                 <Link href={ROUTES.admin.leads}>Open Leads</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
+              </ProButton>
+              <ProButton asChild size="sm" variant="outline">
                 <Link href={ROUTES.admin.bookings}>Open Bookings</Link>
-              </Button>
+              </ProButton>
             </div>
           </div>
 
           {filteredLeads.length === 0 ? (
-            <div className="internal-empty-state">
-              No leads match the current appointment filters.
-            </div>
+            <ProTableEmptyState title="No matching leads" description="No leads match the current appointment filters." />
           ) : (
-            <Table>
+            <ProTable>
               <TableHeader>
                 <TableRow>
                   <TableHead>Lead</TableHead>
@@ -184,7 +179,7 @@ export default async function AdminAppointmentsPage({ searchParams }: Appointmen
                     <TableCell className="font-medium">{lead.fullName}</TableCell>
                     <TableCell>{lead.phone}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{lead.status}</Badge>
+                      <ProStatusBadge label={lead.status} status="pending" />
                     </TableCell>
                     <TableCell>{lead.assigneeName ?? "Unassigned"}</TableCell>
                     <TableCell>{formatDateTime(lead.lastActivityAt)}</TableCell>
@@ -192,15 +187,15 @@ export default async function AdminAppointmentsPage({ searchParams }: Appointmen
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </ProTable>
           )}
 
           <div className="text-xs text-muted-foreground">
             Appointment persistence model is not yet separated into a dedicated table. This baseline screen
             derives scheduling workload from lead status progression.
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ActionCard>
     </section>
   )
 }

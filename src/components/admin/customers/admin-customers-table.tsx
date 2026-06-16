@@ -1,11 +1,12 @@
 import {
-  Table,
+  ProTable,
+  ProTableEmptyState,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import type { AdminUserListItem } from "@/lib/admin/users/actions"
 
 type AdminCustomersTableProps = {
@@ -23,15 +24,11 @@ function formatDateTime(value: string): string {
 
 export function AdminCustomersTable({ customers }: AdminCustomersTableProps) {
   if (customers.length === 0) {
-    return (
-      <div className="internal-empty-state">
-        No customers found for the current filters.
-      </div>
-    )
+    return <ProTableEmptyState title="No customers found" description="Try adjusting search filters." />
   }
 
   return (
-    <Table>
+    <ProTable>
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
@@ -52,6 +49,6 @@ export function AdminCustomersTable({ customers }: AdminCustomersTableProps) {
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </ProTable>
   )
 }

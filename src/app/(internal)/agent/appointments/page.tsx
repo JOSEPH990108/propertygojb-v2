@@ -1,17 +1,23 @@
 import Link from "next/link"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import {
-  Table,
+  ActionCard,
+  MetricCard,
+  ProButton,
+  ProSearchInput,
+  ProSelect,
+  ProStatusBadge,
+  ProTable,
+  ProTableEmptyState,
+  ProTableFilter,
+  ProTablePagination,
+  ProTableToolbar,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import {
   listAgentAppointments,
@@ -117,67 +123,57 @@ export default async function AgentAppointmentsPage({ searchParams }: AgentAppoi
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Appointments</CardTitle>
-          <CardDescription>
-            Your appointment queue derived from assigned qualified and nurturing leads.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <ActionCard
+        title="Appointments"
+        description="Your appointment queue derived from assigned qualified and nurturing leads."
+      >
+        <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Scheduled</div>
-              <div className="text-xl font-semibold">{result.scheduledCount}</div>
-            </div>
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Pipeline (qualified/nurturing)</div>
-              <div className="text-xl font-semibold">{result.pipelineCount}</div>
-            </div>
-            <div className="internal-metric-tile">
-              <div className="text-xs text-muted-foreground">Visible in current scope</div>
-              <div className="text-xl font-semibold">{result.total}</div>
-            </div>
+            <MetricCard label="Scheduled" value={result.scheduledCount} hint="Appointment set leads" />
+            <MetricCard label="Pipeline" value={result.pipelineCount} hint="Qualified or nurturing" accent="blue" />
+            <MetricCard label="Visible" value={result.total} hint="Rows in current scope" accent="green" />
           </div>
 
-          <form action={ROUTES.agent.appointments} className="grid gap-3 md:grid-cols-[2fr_1fr_auto_auto]">
-            <Input
-              name="q"
-              defaultValue={result.search}
-              placeholder="Search by lead name or phone"
-            />
-            <select
-              name="scope"
-              defaultValue={result.scope}
-              className="internal-form-select"
-            >
-              <option value="ALL">All scopes</option>
-              <option value="SCHEDULED">Scheduled only</option>
-              <option value="PIPELINE">Pipeline only</option>
-            </select>
-            <Button type="submit" variant="outline">
-              Apply
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href={ROUTES.agent.appointments}>Reset</Link>
-            </Button>
+          <form action={ROUTES.agent.appointments}>
+            <ProTableToolbar className="grid gap-3 md:grid-cols-[2fr_1fr_auto_auto]">
+              <ProSearchInput
+                name="q"
+                defaultValue={result.search}
+                placeholder="Search by lead name or phone"
+              />
+              <ProTableFilter as="div" className="min-h-11 p-0" showIcon={false}>
+                <ProSelect
+                  name="scope"
+                  defaultValue={result.scope}
+                  options={[
+                    { value: "ALL", label: "All scopes" },
+                    { value: "SCHEDULED", label: "Scheduled only" },
+                    { value: "PIPELINE", label: "Pipeline only" },
+                  ]}
+                />
+              </ProTableFilter>
+              <ProButton type="submit" variant="outline">
+                Apply
+              </ProButton>
+              <ProButton asChild variant="ghost">
+                <Link href={ROUTES.agent.appointments}>Reset</Link>
+              </ProButton>
+            </ProTableToolbar>
           </form>
 
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
             <span>
               Showing {result.appointments.length} of {result.total} rows for the active scope.
             </span>
-            <Button asChild size="sm" variant="outline">
+            <ProButton asChild size="sm" variant="outline">
               <Link href={ROUTES.agent.leads}>Open Leads</Link>
-            </Button>
+            </ProButton>
           </div>
 
           {result.appointments.length === 0 ? (
-            <div className="internal-empty-state">
-              No appointments found for the current filters.
-            </div>
+            <ProTableEmptyState title="No appointments found" description="No appointments found for the current filters." />
           ) : (
-            <Table>
+            <ProTable>
               <TableHeader>
                 <TableRow>
                   <TableHead>Lead</TableHead>
@@ -194,7 +190,7 @@ export default async function AgentAppointmentsPage({ searchParams }: AgentAppoi
                     <TableCell className="font-medium">{item.leadName}</TableCell>
                     <TableCell>{item.phone}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{item.status}</Badge>
+                      <ProStatusBadge label={item.status} status="pending" />
                     </TableCell>
                     <TableCell>{formatDateTime(item.lastActivityAt)}</TableCell>
                     <TableCell>{formatDateTime(item.updatedAt)}</TableCell>
@@ -204,46 +200,39 @@ export default async function AgentAppointmentsPage({ searchParams }: AgentAppoi
                           <input type="hidden" name="leadId" value={item.leadId} />
                           <input type="hidden" name="toStatus" value="NURTURING" />
                           <input type="hidden" name="nextPath" value={ROUTES.agent.appointments} />
-                          <Button type="submit" size="sm" variant="outline">
+                          <ProButton type="submit" size="sm" variant="outline">
                             Move to Nurturing
-                          </Button>
+                          </ProButton>
                         </form>
                       ) : (
                         <form action={setAgentAppointmentStatusFormAction} className="inline-flex">
                           <input type="hidden" name="leadId" value={item.leadId} />
                           <input type="hidden" name="toStatus" value="APPOINTMENT_SET" />
                           <input type="hidden" name="nextPath" value={ROUTES.agent.appointments} />
-                          <Button type="submit" size="sm" variant="outline">
+                          <ProButton type="submit" size="sm" variant="outline">
                             Mark Scheduled
-                          </Button>
+                          </ProButton>
                         </form>
                       )}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </ProTable>
           )}
 
-          <div className="internal-divider flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Page {result.page} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline" disabled={result.page <= 1}>
-                <Link href={previousHref}>Previous</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" disabled={result.page >= totalPages}>
-                <Link href={nextHref}>Next</Link>
-              </Button>
-            </div>
-          </div>
+          <ProTablePagination
+            page={result.page}
+            totalPages={totalPages}
+            previousHref={previousHref}
+            nextHref={nextHref}
+          />
 
           <div className="text-xs text-muted-foreground">
             Dedicated appointment persistence is pending. This baseline module tracks scheduling flow through lead statuses.
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ActionCard>
     </section>
   )
 }

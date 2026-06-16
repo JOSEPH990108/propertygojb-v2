@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge"
+import { ProStatusBadge } from "@/components/pro-ui"
 
 type ProjectPublishBadgeProps = {
   isPublished: boolean
@@ -6,8 +6,8 @@ type ProjectPublishBadgeProps = {
 
 export function ProjectPublishBadge({ isPublished }: ProjectPublishBadgeProps) {
   if (isPublished) {
-    return <Badge>Published</Badge>
+    return <ProStatusBadge label="Published" status="published" />
   }
 
-  return <Badge variant="outline">Draft</Badge>
+  return <ProStatusBadge label="Draft" status="draft" />
 }

@@ -1,12 +1,13 @@
-import { Badge } from "@/components/ui/badge"
 import {
-  Table,
+  ProStatusBadge,
+  ProTable,
+  ProTableEmptyState,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import type { AdminPropertyListItem } from "@/lib/admin/properties/actions"
 
 type AdminPropertiesTableProps = {
@@ -46,15 +47,11 @@ function renderTowerMeta(property: AdminPropertyListItem): string {
 
 export function AdminPropertiesTable({ properties }: AdminPropertiesTableProps) {
   if (properties.length === 0) {
-    return (
-      <div className="internal-empty-state">
-        No properties found for the current filters.
-      </div>
-    )
+    return <ProTableEmptyState title="No properties found" description="Try widening your filters." />
   }
 
   return (
-    <Table>
+    <ProTable>
       <TableHeader>
         <TableRow>
           <TableHead>Unit</TableHead>
@@ -75,7 +72,7 @@ export function AdminPropertiesTable({ properties }: AdminPropertiesTableProps) 
             <TableCell className="font-medium">{property.unitNo}</TableCell>
             <TableCell>{property.projectName ?? "-"}</TableCell>
             <TableCell>
-              <Badge variant="outline">{property.bookingStatusName ?? property.bookingStatusCode ?? "-"}</Badge>
+              <ProStatusBadge label={property.bookingStatusName ?? property.bookingStatusCode ?? "-"} status="pending" />
             </TableCell>
             <TableCell>{property.lotTypeName ?? property.lotTypeCode ?? "-"}</TableCell>
             <TableCell>{renderTowerMeta(property)}</TableCell>
@@ -89,6 +86,6 @@ export function AdminPropertiesTable({ properties }: AdminPropertiesTableProps) 
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </ProTable>
   )
 }

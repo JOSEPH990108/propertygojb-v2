@@ -1,11 +1,12 @@
 import {
-  Table,
+  ProTable,
+  ProTableEmptyState,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/pro-ui"
 import { UserRoleBadge } from "@/components/admin/users/user-role-badge"
 import type { AdminUserListItem } from "@/lib/admin/users/actions"
 import { RoleChangeDialog } from "@/components/admin/users/role-change-dialog"
@@ -25,15 +26,11 @@ function formatDateTime(value: string): string {
 
 export function AdminUsersTable({ users }: AdminUsersTableProps) {
   if (users.length === 0) {
-    return (
-      <div className="internal-empty-state">
-        No users found for the current filters.
-      </div>
-    )
+    return <ProTableEmptyState title="No users found" description="Try adjusting role or search filters." />
   }
 
   return (
-    <Table>
+    <ProTable>
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
@@ -67,6 +64,6 @@ export function AdminUsersTable({ users }: AdminUsersTableProps) {
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </ProTable>
   )
 }

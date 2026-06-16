@@ -1,9 +1,15 @@
 import Link from "next/link"
 
 import { AdminProjectsTable } from "@/components/admin/projects/admin-projects-table"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import {
+  ActionCard,
+  ProButton,
+  ProSearchInput,
+  ProSelect,
+  ProTableFilter,
+  ProTablePagination,
+  ProTableToolbar,
+} from "@/components/pro-ui"
 import { ROUTES } from "@/config/routes"
 import {
   listAdminProjects,
@@ -104,90 +110,80 @@ export default async function AdminProjectsPage({ searchParams }: ProjectsPagePr
 
   return (
     <section className="internal-page">
-      <Card>
-        <CardHeader>
-          <CardTitle>Projects</CardTitle>
-          <CardDescription>
-            Manage property project records for internal operations.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <ActionCard
+        title="Projects"
+        description="Manage property project records for internal operations."
+        action={
+          <ProButton asChild variant="gradient" size="sm">
+            <Link href={ROUTES.admin.projectsNew}>Create Project</Link>
+          </ProButton>
+        }
+      >
+        <div className="space-y-4">
           <form
             action={ROUTES.admin.projects}
-            className="grid gap-3 md:grid-cols-[2fr_1fr_1fr_1fr_auto_auto]"
+            className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_1fr_auto_auto]"
           >
-            <Input
+            <ProSearchInput
               name="q"
               defaultValue={result.search}
               placeholder="Search by project, slug, developer, region, or area"
             />
-            <select
-              name="status"
-              defaultValue={result.status}
-              className="internal-form-select"
-            >
-              <option value="ALL">All statuses</option>
-              {result.statusOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-            <select
-              name="published"
-              defaultValue={result.published}
-              className="internal-form-select"
-            >
-              <option value="ALL">All publish states</option>
-              <option value="PUBLISHED">Published</option>
-              <option value="UNPUBLISHED">Draft</option>
-            </select>
-            <select
-              name="category"
-              defaultValue={result.category}
-              className="internal-form-select"
-            >
-              <option value="ALL">All categories</option>
-              {result.categoryOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" variant="outline">
+            <ProTableFilter as="div" showIcon={false} className="p-0">
+              <ProSelect
+                name="status"
+                defaultValue={result.status}
+                options={[
+                  { value: "ALL", label: "All statuses" },
+                  ...result.statusOptions.map((option) => ({ value: option.id, label: option.name })),
+                ]}
+              />
+            </ProTableFilter>
+            <ProTableFilter as="div" showIcon={false} className="p-0">
+              <ProSelect
+                name="published"
+                defaultValue={result.published}
+                options={[
+                  { value: "ALL", label: "All publish states" },
+                  { value: "PUBLISHED", label: "Published" },
+                  { value: "UNPUBLISHED", label: "Draft" },
+                ]}
+              />
+            </ProTableFilter>
+            <ProTableFilter as="div" showIcon={false} className="p-0">
+              <ProSelect
+                name="category"
+                defaultValue={result.category}
+                options={[
+                  { value: "ALL", label: "All categories" },
+                  ...result.categoryOptions.map((option) => ({ value: option.id, label: option.name })),
+                ]}
+              />
+            </ProTableFilter>
+            <ProButton type="submit" variant="primary">
               Apply
-            </Button>
-            <Button asChild variant="ghost">
+            </ProButton>
+            <ProButton asChild variant="ghost">
               <Link href={ROUTES.admin.projects}>Reset</Link>
-            </Button>
+            </ProButton>
           </form>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-            <span>
+          <ProTableToolbar>
+            <p className="text-xs text-muted-foreground">
               Showing {result.projects.length} of {result.total} projects.
-            </span>
-            <Button asChild size="sm" variant="outline">
-              <Link href={ROUTES.admin.projectsNew}>Create Project</Link>
-            </Button>
-          </div>
+            </p>
+          </ProTableToolbar>
 
           <AdminProjectsTable projects={result.projects} />
 
-          <div className="internal-divider flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Page {result.page} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline" disabled={result.page <= 1}>
-                <Link href={previousHref}>Previous</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" disabled={result.page >= totalPages}>
-                <Link href={nextHref}>Next</Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <ProTablePagination
+            page={result.page}
+            totalPages={totalPages}
+            previousHref={previousHref}
+            nextHref={nextHref}
+          />
+        </div>
+      </ActionCard>
     </section>
   )
 }
